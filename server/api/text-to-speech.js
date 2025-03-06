@@ -3,7 +3,7 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { writeFile } from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 
-process.env.GOOGLE_APPLICATION_CREDENTIALS = '/Users/lianghaopeng/work/clinic-chat-app/assets/gmail-login-421617-f23ce8ba70b9.json';
+process.env.GOOGLE_APPLICATION_CREDENTIALS = '/Users/jiahanchen/Desktop/final project/code/clinic-chatbot/assets/gmail-login-421617-f23ce8ba70b9.json';
 
 const client = new TextToSpeechClient();
 

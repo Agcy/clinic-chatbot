@@ -144,15 +144,15 @@ const handleResize = () => {
 };
 
 // 动画循环
-const animate = () => {
-  requestAnimationFrame(animate);
+// const animate = () => {
+//   requestAnimationFrame(animate);
 
-  const delta = clock.getDelta();
-  if (mixer) mixer.update(delta);
-  TWEEN.update();
+//   const delta = clock.getDelta();
+//   if (mixer) mixer.update(delta);
+//   TWEEN.update();
 
-  renderer.render(scene, camera);
-};
+//   renderer.render(scene, camera);
+// };
 
 // 生命周期管理
 onMounted(async () => {

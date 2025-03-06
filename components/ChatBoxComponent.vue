@@ -22,22 +22,31 @@
                 placeholder="Type a message"
                 class="flex-1 border border-gray-300 rounded-full px-4 py-2 mr-2"
             />
-            <button
-                type="button"
-                @click="startRecording"
-                :disabled="isRecording"
-                class="bg-green-500 text-white px-4 py-2 rounded-full"
-            >
-              🎤 {{ isRecording ? "Listening..." : "Speak" }}
-            </button>
-            <button
-                type="button"
-                @click="stopRecording"
-                :disabled="!isRecording"
-                class="bg-red-500 text-white px-4 py-2 rounded-full ml-2"
-            >
-              🛑 Stop
-            </button>
+            <div class="flex space-x-2">
+              <button
+                  type="button"
+                  @click="startRecording"
+                  :disabled="isRecording"
+                  class="h-10 bg-green-500 text-white px-4 rounded-full flex items-center justify-center"
+              >
+                🎤 {{ isRecording ? "Listening..." : "Speak" }}
+              </button>
+              <button
+                  type="button"
+                  @click="stopRecording"
+                  :disabled="!isRecording"
+                  class="h-10 bg-red-500 text-white px-4 rounded-full flex items-center justify-center"
+              >
+                🛑 Stop
+              </button>
+              <button
+                  type="button"
+                  @click="evaluateConversation"
+                  class="h-10 bg-blue-500 text-white px-4 rounded-full flex items-center justify-center"
+              >
+                📝 评估
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -109,60 +118,77 @@ const sendMessage = async () => {
     characterRef.value.speak(reply);
   } catch (error) {
     console.error('Error sending message:', error);
-    messages.value.push({ id: Date.now(), text: "Error: Failed to send message.", from: 'user' });
+    alert('发送消息失败：' + error.message);
   }
 };
 
 const startRecording = async () => {
-  isRecording.value = true;
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  try {
+    // 检查浏览器是否支持媒体设备API
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('您的浏览器不支持音频录制功能');
+    }
 
-  const mimeType = getSupportedContentMimeType();
-  if (!mimeType) {
-    console.error('当前浏览器不支持任何音频格式');
-    return;
-  }
+    isRecording.value = true;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-  mediaRecorder = new MediaRecorder(stream, { mimeType });
+    const mimeType = getSupportedContentMimeType();
+    if (!mimeType) {
+      throw new Error('当前浏览器不支持任何音频格式');
+    }
 
-  mediaRecorder.ondataavailable = (event) => {
-    audioChunks.push(event.data);
-  };
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
 
-  mediaRecorder.onstop = async () => {
-    const blob = new Blob(audioChunks, { type: mimeType });
-    audioBlob.value = blob;
-    audioChunks = [];
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const base64Audio = reader.result.split(",")[1];
-        const response = await axios.post("/api/speech-to-text", {
-          audioData: base64Audio,
-          mimeType: mimeType
-        }, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.error) {
-          messages.value.push({ id: Date.now(), text: "Error: Speech recognition failed.", from: 'user' });
-          return;
-        }
-
-        userInput.value = response.data;
-        sendMessage();
-      } catch (error) {
-        console.error('Error processing audio:', error);
-      }
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
     };
 
-    reader.readAsDataURL(blob);
-  };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(audioChunks, { type: mimeType });
+      audioBlob.value = blob;
+      audioChunks = [];
 
-  mediaRecorder.start();
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64Audio = reader.result.split(",")[1];
+          const response = await axios.post("/api/speech-to-text", {
+            audioData: base64Audio,
+            mimeType: mimeType
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.error) {
+            console.error('语音识别失败:', response.error);
+            return;
+          }
+
+          // 确保response.data是字符串类型
+          const recognizedText = typeof response.data === 'string' ? response.data : 
+                               response.data?.text || response.data?.transcription || 
+                               String(response.data);
+          
+          userInput.value = recognizedText;
+          if (recognizedText.trim()) {
+            await sendMessage();
+          }
+        } catch (error) {
+          console.error('处理音频时出错:', error);
+        }
+      };
+
+      reader.readAsDataURL(blob);
+    };
+
+    mediaRecorder.start();
+  } catch (error) {
+    console.error('启动录音失败:', error);
+    isRecording.value = false;
+    alert(error.message || '无法访问麦克风，请检查权限设置');
+  }
 };
 
 const stopRecording = () => {
@@ -197,12 +223,70 @@ const getSupportedContentMimeType = () => {
               ? 'audio/mp4'
               : null;
 };
+
+// 评估对话的方法
+const evaluateConversation = async () => {
+  if (messages.value.length === 0) {
+    alert('还没有对话内容可以评估！');
+    return;
+  }
+
+  // 过滤掉错误消息
+  const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
+
+  // 打印对话内容到控制台
+  console.log('当前对话记录：', validMessages);
+
+  const maxRetries = 3;
+  let retryCount = 0;
+
+  const tryToSave = async () => {
+    try {
+      // 准备对话数据
+      const conversationData = {
+        message: '保存对话记录',
+        userId: 'root',
+        scenarioId: 'vascular_tumor_001',
+        shouldSave: true,
+        messages: validMessages.map(msg => ({
+          role: msg.from === 'user' ? 'trainer' : 'trainee',
+          content: msg.text,
+          timestamp: new Date()
+        })),
+        rating: 5 // 默认评分
+      };
+
+      // 发送到服务器保存
+      const response = await axios.post("/api/bailian", conversationData);
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+
+      console.log('保存成功：', response.data);
+      alert('对话评估已保存！');
+    } catch (error) {
+      console.error(`保存尝试 ${retryCount + 1} 失败:`, error);
+      
+      if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`正在进行第 ${retryCount} 次重试...`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒后重试
+        return tryToSave();
+      }
+      
+      alert('保存对话记录失败：' + error.message);
+    }
+  };
+
+  await tryToSave();
+};
 </script>
 
 <style scoped>
 .chat-box {
   z-index: 2; /* 确保聊天框在3D模型之上 */
-  //backdrop-filter: blur(10px); /* 添加模糊效果 */
+  backdrop-filter: blur(10px); /* 添加模糊效果 */
 }
 
 .message {
