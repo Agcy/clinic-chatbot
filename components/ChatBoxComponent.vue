@@ -1,51 +1,97 @@
 <template>
-  <div class="chat-box fixed inset-x-0 bottom-0 bg-transparent p-4">
-    <div class="max-w-md mx-auto bg-transparent rounded-lg shadow-none overflow-hidden">
-      <div class="p-4">
+  <div class="chat-box fixed inset-x-0 bottom-0 bg-transparent p-4 pb-10">
+    <div class="max-w-md mx-auto bg-transparent rounded-lg shadow-none overflow-visible">
+      <div class="p-3 pb-2">
         <transition-group name="fade" tag="div">
           <div
               v-for="(msg, index) in visibleMessages"
               :key="msg.id"
-              class="message mb-4 p-2 rounded-lg"
+              class="message mb-3 p-2 rounded-lg"
               :class="msg.from === 'user' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'"
           >
             {{ msg.text }}
           </div>
         </transition-group>
+        
+        <!-- 评估结果显示区域 -->
+        <div v-if="showEvaluation" class="evaluation-results bg-yellow-50 text-gray-800 rounded-lg p-3 my-2 border border-yellow-200">
+          <h3 class="text-lg font-semibold mb-2">训练评估结果</h3>
+          <div class="rating flex items-center mb-2">
+            <span class="mr-2">评分:</span>
+            <div class="rating-stars flex">
+              <span 
+                v-for="i in 10" 
+                :key="i" 
+                :class="i <= evaluationRating ? 'text-yellow-500' : 'text-gray-300'"
+              >★</span>
+              <span class="ml-2 font-bold">{{ evaluationRating }}/10</span>
+            </div>
+          </div>
+          <div class="evaluation-msg">
+            <p class="text-sm font-medium">改进建议:</p>
+            <p class="text-sm">{{ evaluationMsg }}</p>
+          </div>
+        </div>
       </div>
-      <div class="bg-transparent p-4">
+      <div class="bg-transparent p-3 pt-2 pb-8">
         <form @submit.prevent="sendMessage">
-          <div class="flex items-center">
+          <div class="flex flex-col md:flex-row items-center gap-3">
             <input
                 v-model="userInput"
                 type="text"
                 placeholder="Type a message"
-                class="flex-1 border border-gray-300 rounded-full px-4 py-2 mr-2"
+                class="w-full md:flex-1 border border-gray-300 rounded-full px-4 py-2"
+                :disabled="trainingFinished"
             />
-            <div class="flex space-x-2">
-              <button
-                  type="button"
-                  @click="startRecording"
-                  :disabled="isRecording"
-                  class="h-10 bg-green-500 text-white px-4 rounded-full flex items-center justify-center"
-              >
-                🎤 {{ isRecording ? "Listening..." : "Speak" }}
-              </button>
-              <button
-                  type="button"
-                  @click="stopRecording"
-                  :disabled="!isRecording"
-                  class="h-10 bg-red-500 text-white px-4 rounded-full flex items-center justify-center"
-              >
-                🛑 Stop
-              </button>
-              <button
-                  type="button"
-                  @click="evaluateConversation"
-                  class="h-10 bg-blue-500 text-white px-4 rounded-full flex items-center justify-center"
-              >
-                📝 评估
-              </button>
+            <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
+              <!-- 训练中按钮组 -->
+              <template v-if="!trainingFinished">
+                <button
+                    type="button"
+                    @click="startRecording"
+                    :disabled="isRecording"
+                    class="h-12 min-w-[4.5rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  🎤 {{ isRecording ? "录音中" : "语音" }}
+                </button>
+                <button
+                    type="button"
+                    @click="stopRecording"
+                    :disabled="!isRecording"
+                    class="h-12 min-w-[4.5rem] bg-red-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  🛑 停止
+                </button>
+                <button
+                    type="button"
+                    @click="finishTraining"
+                    :disabled="isEvaluating || messages.length === 0"
+                    class="h-12 min-w-[6rem] bg-purple-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  ✓ 完成训练
+                </button>
+              </template>
+              
+              <!-- 训练后按钮组 -->
+              <template v-else>
+                <button
+                    v-if="!showEvaluation"
+                    type="button"
+                    @click="evaluateConversation"
+                    :disabled="isEvaluating"
+                    class="h-12 min-w-[6rem] bg-blue-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  📝 {{ isEvaluating ? "评估中" : "评估" }}
+                </button>
+                <button
+                    v-else
+                    type="button"
+                    @click="resetTraining"
+                    class="h-12 min-w-[6rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  🔄 再次训练
+                </button>
+              </template>
             </div>
           </div>
         </form>
@@ -59,21 +105,32 @@ import { ref } from 'vue';
 import axios from 'axios';
 import ThreeDCharacter from '@/components/ThreeDCharacter.vue';
 
+// 定义props接收父组件传来的characterRef
+const props = defineProps({
+  characterRef: {
+    type: Object,
+    default: null
+  }
+});
+
 const messages = ref([]);
 const userInput = ref("");
 const isRecording = ref(false);
 const audioBlob = ref(null);
+const trainingFinished = ref(false);
+const isEvaluating = ref(false);
+const showEvaluation = ref(false);
+const evaluationRating = ref(0);
+const evaluationMsg = ref("");
 
 let mediaRecorder;
 let audioChunks = [];
 
 const visibleMessages = ref([]);
 
-const characterRef = ref(null);
-
 const sendMessage = async () => {
   const userMessage = userInput.value.trim();
-  if (!userMessage) {
+  if (!userMessage || trainingFinished.value) {
     return;
   }
 
@@ -114,8 +171,12 @@ const sendMessage = async () => {
     const audio = new Audio(audioUrl);
     audio.play();
 
-    // Trigger speaking animation
-    characterRef.value.speak(reply);
+    // Trigger speaking animation (添加空值检查)
+    if (props.characterRef?.value) {
+      props.characterRef.value.speak(reply);
+    } else {
+      console.log('3D角色引用不可用，无法触发speak动画');
+    }
   } catch (error) {
     console.error('Error sending message:', error);
     alert('发送消息失败：' + error.message);
@@ -123,6 +184,8 @@ const sendMessage = async () => {
 };
 
 const startRecording = async () => {
+  if (trainingFinished.value) return;
+  
   try {
     // 检查浏览器是否支持媒体设备API
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -201,7 +264,6 @@ const stopRecording = () => {
   mediaRecorder.stop();
 };
 
-// const downloadAudio = ()```vue
 const downloadAudio = () => {
   if (!audioBlob.value) {
     return;
@@ -224,62 +286,75 @@ const getSupportedContentMimeType = () => {
               : null;
 };
 
-// 评估对话的方法
+/**
+ * 完成训练，准备评估
+ */
+const finishTraining = () => {
+  if (messages.value.length === 0) {
+    alert('还没有对话内容可以评估！');
+    return;
+  }
+  
+  trainingFinished.value = true;
+};
+
+/**
+ * 评估对话
+ */
 const evaluateConversation = async () => {
   if (messages.value.length === 0) {
     alert('还没有对话内容可以评估！');
     return;
   }
 
-  // 过滤掉错误消息
-  const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
+  isEvaluating.value = true;
 
-  // 打印对话内容到控制台
-  console.log('当前对话记录：', validMessages);
+  try {
+    // 过滤掉错误消息
+    const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
 
-  const maxRetries = 3;
-  let retryCount = 0;
+    // 准备对话数据
+    const conversationData = {
+      userId: 'root',
+      scenarioId: 'vascular_tumor_001',
+      messages: validMessages.map(msg => ({
+        role: msg.from === 'user' ? 'trainer' : 'trainee',
+        content: msg.text,
+        timestamp: new Date()
+      }))
+    };
 
-  const tryToSave = async () => {
-    try {
-      // 准备对话数据
-      const conversationData = {
-        message: '保存对话记录',
-        userId: 'root',
-        scenarioId: 'vascular_tumor_001',
-        shouldSave: true,
-        messages: validMessages.map(msg => ({
-          role: msg.from === 'user' ? 'trainer' : 'trainee',
-          content: msg.text,
-          timestamp: new Date()
-        })),
-        rating: 5 // 默认评分
-      };
-
-      // 发送到服务器保存
-      const response = await axios.post("/api/bailian", conversationData);
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
-
-      console.log('保存成功：', response.data);
-      alert('对话评估已保存！');
-    } catch (error) {
-      console.error(`保存尝试 ${retryCount + 1} 失败:`, error);
-      
-      if (retryCount < maxRetries) {
-        retryCount++;
-        console.log(`正在进行第 ${retryCount} 次重试...`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒后重试
-        return tryToSave();
-      }
-      
-      alert('保存对话记录失败：' + error.message);
+    // 调用评估API
+    const response = await axios.post("/api/evaluate-conversation", conversationData);
+    
+    if (response.data.error) {
+      throw new Error(response.data.error);
     }
-  };
 
-  await tryToSave();
+    // 显示评估结果
+    evaluationRating.value = response.data.rating;
+    evaluationMsg.value = response.data.evaluation_msg;
+    showEvaluation.value = true;
+
+    console.log('评估成功：', response.data);
+  } catch (error) {
+    console.error('评估失败:', error);
+    alert('对话评估失败：' + error.message);
+  } finally {
+    isEvaluating.value = false;
+  }
+};
+
+/**
+ * 重置训练，开始新一轮
+ */
+const resetTraining = () => {
+  messages.value = [];
+  visibleMessages.value = [];
+  trainingFinished.value = false;
+  showEvaluation.value = false;
+  evaluationRating.value = 0;
+  evaluationMsg.value = "";
 };
 </script>
 
@@ -287,6 +362,8 @@ const evaluateConversation = async () => {
 .chat-box {
   z-index: 2; /* 确保聊天框在3D模型之上 */
   backdrop-filter: blur(10px); /* 添加模糊效果 */
+  padding-bottom: 4rem; /* 增加底部间距，确保按钮完全可见 */
+  margin-bottom: 1.5rem; /* 添加外边距，防止内容被底部导航栏遮挡 */
 }
 
 .message {
@@ -299,5 +376,22 @@ const evaluateConversation = async () => {
 
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+.evaluation-results {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 移动设备上的响应式调整 */
+@media (max-width: 640px) {
+  .chat-box {
+    padding-bottom: 5rem;
+    margin-bottom: 2rem;
+  }
 }
 </style>

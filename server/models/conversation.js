@@ -30,8 +30,12 @@ const conversationSchema = new mongoose.Schema({
   }],
   rating: {
     type: Number,
-    min: 1,
-    max: 5,
+    min: 0,
+    max: 10,
+    default: null
+  },
+  evaluation_msg: {
+    type: String,
     default: null
   },
   createdAt: {

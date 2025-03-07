@@ -1,13 +1,16 @@
 <template>
   <div class="chat-container">
     <ThreeDCharacter ref="characterRef" />
-    <ChatBoxComponent />
+    <ChatBoxComponent :character-ref="characterRef" />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import ThreeDCharacter from "@/components/ThreeDCharacter.vue";
 import ChatBoxComponent from "@/components/ChatBoxComponent.vue";
+
+const characterRef = ref(null);
 </script>
 
 <style scoped>
