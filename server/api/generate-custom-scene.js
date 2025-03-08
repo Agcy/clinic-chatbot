@@ -70,7 +70,8 @@ export default defineEventHandler(async (event) => {
           content: prompt
         }
       ],
-      temperature: 0.7
+      temperature: 0.7,
+      response_format: { type: "json_object" }
     });
 
     // 解析AI返回的结果
@@ -105,12 +106,29 @@ export default defineEventHandler(async (event) => {
 
     // 确保数据库已连接
     if (!getConnectionStatus()) {
+      console.log('MongoDB未连接，正在连接...');
       await connectDB();
     }
 
-    // 将场景保存到数据库
-    const scene = new Scene(completeSceneData);
-    await scene.save();
+    try {
+      // 将场景保存到数据库
+      console.log('正在保存场景到MongoDB:', completeSceneData.scene_id);
+      const scene = new Scene(completeSceneData);
+      await scene.save();
+      console.log('场景保存成功:', completeSceneData.scene_id);
+    } catch (dbError) {
+      console.error('保存场景到MongoDB失败:', dbError);
+      // 如果是重复ID错误，生成一个新的ID
+      if (dbError.code === 11000) {
+        completeSceneData.scene_id = `custom_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        console.log('重新生成场景ID:', completeSceneData.scene_id);
+        const scene = new Scene(completeSceneData);
+        await scene.save();
+        console.log('使用新ID保存场景成功');
+      } else {
+        throw dbError; // 其他错误重新抛出
+      }
+    }
 
     return {
       success: true,

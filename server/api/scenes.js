@@ -15,12 +15,7 @@ export default defineEventHandler(async (event) => {
 
         if (event.method === 'GET') {
             // 获取所有场景列表
-            const scenes = await Scene.find({}, {
-                scene_id: 1,
-                card_img: 1,
-                scene_title: 1,
-                scene_type: 1
-            });
+            const scenes = await Scene.find({});
 
             return {
                 success: true,
