@@ -8,8 +8,6 @@ export default defineNitroPlugin(async () => {
   try {
     mongoose.set('strictQuery', false);
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000, // 超时时间设置为 5 秒
       socketTimeoutMS: 45000, // Socket 超时时间
     });
