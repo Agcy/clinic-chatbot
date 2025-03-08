@@ -1,3 +1,7 @@
+/**
+ * @fileoverview 百炼API接口
+ */
+
 import { defineEventHandler, readBody } from 'h3';
 import OpenAI from "openai";
 import { Conversation } from '../models/conversation';
@@ -19,7 +23,7 @@ export default defineEventHandler(async (event) => {
         return { error: 'Invalid message provided' };
     }
 
-    const { message, userId, scenarioId, shouldSave = false, messages = [], rating = null } = body;
+    const { message, userId, scenarioId, shouldSave = false, messages = [], rating = null, systemPrompt } = body;
 
     try {
         // 如果是保存对话记录的请求
@@ -52,7 +56,10 @@ export default defineEventHandler(async (event) => {
         const completion = await openai.chat.completions.create({
             model: "qwen-plus", // 使用 qwen-plus 模型
             messages: [
-                { role: "system", content: "你是一个病人，你最近出现了头晕、头痛的症状，并且曾经历过一次交通意外。医生刚刚通过 MRI 发现你的脑部有一个血管瘤。你对自己的健康状况感到担忧，并且想要弄清楚医生的诊断结果。你可能会问医生更多关于病情、最坏情况和治疗方案的问题（如：'这个瘤会不会爆裂？'、'最坏的可能是什么？'）。请用粤语与医生交谈，并尽可能表现出真实病人的反应，例如焦虑、疑惑或希望得到更多信息。不要脱离角色，现在请开始你的第一句话。" },
+                { 
+                    role: "system", 
+                    content: systemPrompt || "你是一个病人，你最近出现了头晕、头痛的症状，并且曾经历过一次交通意外。医生刚刚通过 MRI 发现你的脑部有一个血管瘤。你对自己的健康状况感到担忧，并且想要弄清楚医生的诊断结果。你可能会问医生更多关于病情、最坏情况和治疗方案的问题（如：'这个瘤会不会爆裂？'、'最坏的可能是什么？'）。请用粤语与医生交谈，并尽可能表现出真实病人的反应，例如焦虑、疑惑或希望得到更多信息。不要脱离角色，现在请开始你的第一句话。"
+                },
                 { role: "user", content: message }
             ],
         });

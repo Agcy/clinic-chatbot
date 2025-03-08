@@ -105,11 +105,15 @@ import { ref } from 'vue';
 import axios from 'axios';
 import ThreeDCharacter from '@/components/ThreeDCharacter.vue';
 
-// 定义props接收父组件传来的characterRef
+// 定义props接收父组件传来的characterRef和currentScene
 const props = defineProps({
   characterRef: {
     type: Object,
     default: null
+  },
+  currentScene: {
+    type: Object,
+    required: true
   }
 });
 
@@ -151,7 +155,10 @@ const sendMessage = async () => {
 
   try {
     console.log('Sending message to API:', userMessage);
-    const aiResponse = await axios.post("/api/bailian1", { message: userMessage });
+    const aiResponse = await axios.post("/api/bailian", { 
+        message: userMessage,
+        systemPrompt: props.currentScene.scene_description_model
+    });
     const reply = aiResponse?.data?.response || "I didn't understand that.";
     const aiMessage = {
       id: Date.now(),
@@ -171,11 +178,9 @@ const sendMessage = async () => {
     const audio = new Audio(audioUrl);
     audio.play();
 
-    // Trigger speaking animation (添加空值检查)
+    // Trigger speaking animation
     if (props.characterRef?.value) {
       props.characterRef.value.speak(reply);
-    } else {
-      console.log('3D角色引用不可用，无法触发speak动画');
     }
   } catch (error) {
     console.error('Error sending message:', error);
