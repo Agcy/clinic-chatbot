@@ -14,16 +14,34 @@ export default defineEventHandler(async (event) => {
             await connectDB();
         }
 
-        // 清空现有场景数据
-        await Scene.deleteMany({});
+        // 获取现有场景ID列表
+        const existingScenes = await Scene.find({}, { scene_id: 1 });
+        const existingSceneIds = existingScenes.map(scene => scene.scene_id);
+        console.log(`数据库中存在 ${existingSceneIds.length} 个场景`);
 
-        // 导入新的场景数据
-        const insertedScenes = await Scene.insertMany(scenes);
+        // 统计添加和更新的数量
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        // 遍历JSON文件中的场景数据
+        for (const scene of scenes) {
+            if (existingSceneIds.includes(scene.scene_id)) {
+                // 如果场景ID已存在，则更新
+                await Scene.findOneAndUpdate({ scene_id: scene.scene_id }, scene);
+                updatedCount++;
+            } else {
+                // 如果场景ID不存在，则添加
+                await Scene.create(scene);
+                addedCount++;
+            }
+        }
 
         return {
             success: true,
             message: '场景数据初始化成功',
-            count: insertedScenes.length
+            added: addedCount,
+            updated: updatedCount,
+            total: existingScenes.length + addedCount
         };
     } catch (error) {
         console.error('初始化场景数据失败:', error);

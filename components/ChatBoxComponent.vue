@@ -15,9 +15,9 @@
         
         <!-- 评估结果显示区域 -->
         <div v-if="showEvaluation" class="evaluation-results bg-yellow-50 text-gray-800 rounded-lg p-3 my-2 border border-yellow-200">
-          <h3 class="text-lg font-semibold mb-2">训练评估结果</h3>
+          <h3 class="text-lg font-semibold mb-2">訓練評估結果</h3>
           <div class="rating flex items-center mb-2">
-            <span class="mr-2">评分:</span>
+            <span class="mr-2">評分:</span>
             <div class="rating-stars flex">
               <span 
                 v-for="i in 10" 
@@ -28,7 +28,7 @@
             </div>
           </div>
           <div class="evaluation-msg">
-            <p class="text-sm font-medium">改进建议:</p>
+            <p class="text-sm font-medium">改進建議:</p>
             <p class="text-sm">{{ evaluationMsg }}</p>
           </div>
         </div>
@@ -81,15 +81,23 @@
                     :disabled="isEvaluating"
                     class="h-12 min-w-[6rem] bg-blue-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
                 >
-                  📝 {{ isEvaluating ? "评估中" : "评估" }}
+                  📝 {{ isEvaluating ? "評估中" : "評估" }}
                 </button>
                 <button
                     v-else
                     type="button"
                     @click="resetTraining"
-                    class="h-12 min-w-[6rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                    class="h-12 min-w-[6rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md mr-2"
                 >
-                  🔄 再次训练
+                  🔄 再次訓練
+                </button>
+                <button
+                    v-if="showEvaluation"
+                    type="button"
+                    @click="goToHome"
+                    class="h-12 min-w-[6rem] bg-purple-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
+                >
+                  🏠 回到主頁
                 </button>
               </template>
             </div>
@@ -104,6 +112,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import ThreeDCharacter from '@/components/ThreeDCharacter.vue';
+import { useRouter } from 'vue-router';
 
 // 定义props接收父组件传来的characterRef和currentScene
 const props = defineProps({
@@ -116,6 +125,8 @@ const props = defineProps({
     required: true
   }
 });
+
+const router = useRouter();
 
 const messages = ref([]);
 const userInput = ref("");
@@ -184,7 +195,7 @@ const sendMessage = async () => {
     }
   } catch (error) {
     console.error('Error sending message:', error);
-    alert('发送消息失败：' + error.message);
+    alert('發送消息失敗：' + error.message);
   }
 };
 
@@ -194,7 +205,7 @@ const startRecording = async () => {
   try {
     // 检查浏览器是否支持媒体设备API
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('您的浏览器不支持音频录制功能');
+      throw new Error('您的瀏覽器不支持音頻錄製功能');
     }
 
     isRecording.value = true;
@@ -202,7 +213,7 @@ const startRecording = async () => {
 
     const mimeType = getSupportedContentMimeType();
     if (!mimeType) {
-      throw new Error('当前浏览器不支持任何音频格式');
+      throw new Error('當前瀏覽器不支持任何音頻格式');
     }
 
     mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -255,7 +266,7 @@ const startRecording = async () => {
   } catch (error) {
     console.error('启动录音失败:', error);
     isRecording.value = false;
-    alert(error.message || '无法访问麦克风，请检查权限设置');
+    alert(error.message || '無法訪問麥克風，請檢查權限設置');
   }
 };
 
@@ -296,7 +307,7 @@ const getSupportedContentMimeType = () => {
  */
 const finishTraining = () => {
   if (messages.value.length === 0) {
-    alert('还没有对话内容可以评估！');
+    alert('還沒有對話內容可以評估！');
     return;
   }
   
@@ -308,7 +319,7 @@ const finishTraining = () => {
  */
 const evaluateConversation = async () => {
   if (messages.value.length === 0) {
-    alert('还没有对话内容可以评估！');
+    alert('還沒有對話內容可以評估！');
     return;
   }
 
@@ -344,7 +355,7 @@ const evaluateConversation = async () => {
     console.log('评估成功：', response.data);
   } catch (error) {
     console.error('评估失败:', error);
-    alert('对话评估失败：' + error.message);
+    alert('對話評估失敗：' + error.message);
   } finally {
     isEvaluating.value = false;
   }
@@ -360,6 +371,12 @@ const resetTraining = () => {
   showEvaluation.value = false;
   evaluationRating.value = 0;
   evaluationMsg.value = "";
+};
+
+const goToHome = () => {
+  // 实现回到主页的逻辑
+  console.log('回到主页');
+  router.push('/');
 };
 </script>
 

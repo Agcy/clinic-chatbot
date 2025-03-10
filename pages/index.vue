@@ -2,7 +2,7 @@
 <template>
   <div class="min-h-screen bg-gray-100 py-8 px-4">
     <div class="max-w-6xl mx-auto">
-      <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">选择训练场景</h1>
+      <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">選擇訓練場景</h1>
       
       <!-- 管理操作 -->
       <div class="flex justify-end mb-4 gap-2">
@@ -10,14 +10,14 @@
           @click="showDebug = !showDebug" 
           class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm"
         >
-          {{ showDebug ? '关闭调试' : '开启调试' }}
+          {{ showDebug ? '關閉調試' : '開啟調試' }}
         </button>
         <button 
           @click="initScenes" 
           class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
           :disabled="isInitializing"
         >
-          {{ isInitializing ? '初始化中...' : '重新初始化场景' }}
+          {{ isInitializing ? '初始化中...' : '重新初始化場景' }}
         </button>
       </div>
       
@@ -31,8 +31,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            <h3 class="text-xl font-semibold text-gray-800 mb-2">创建自定义场景</h3>
-            <p class="text-gray-600 text-center">根据您的需求定制专属训练场景</p>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">創建自定義場景</h3>
+            <p class="text-gray-600 text-center">根據您的需求定制專屬訓練場景</p>
           </div>
         </div>
       </div>
@@ -68,28 +68,28 @@
                 @click.stop="viewRoleDetails(scene)" 
                 class="text-xs text-blue-600 hover:text-blue-800 underline"
               >
-                查看角色
+                檢視角色
               </button>
             </div>
             <!-- 调试信息 -->
             <div v-if="showDebug" class="mt-2 text-xs text-gray-500">
-              <div>角色: <span class="font-mono">{{ scene.trainee_character || '未定义' }}</span></div>
-              <div>角色描述: <span class="font-mono">{{ scene.scene_description_charactor ? '有' : '无' }}</span></div>
+              <div>角色: <span class="font-mono">{{ scene.trainee_character || '未定義' }}</span></div>
+              <div>角色描述: <span class="font-mono">{{ scene.scene_description_charactor ? '有' : '無' }}</span></div>
             </div>
           </div>
           
           <!-- 角色描述悬浮提示 -->
           <div class="scene-tooltip absolute inset-0 bg-white bg-opacity-98 p-4 overflow-auto flex flex-col z-20 shadow-lg">
-            <h4 class="text-lg font-semibold text-blue-600 mb-2 sticky top-0 bg-white py-1">您将扮演: {{ scene.trainee_character || '医生' }}</h4>
+            <h4 class="text-lg font-semibold text-blue-600 mb-2 sticky top-0 bg-white py-1">您將扮演: {{ scene.trainee_character || '醫生' }}</h4>
             <div class="text-sm text-gray-700 flex-grow overflow-auto">
               <p v-if="scene.scene_description_charactor && scene.scene_description_charactor.trim()">
                 {{ scene.scene_description_charactor }}
               </p>
               <p v-else class="italic text-gray-500">
-                暂无角色描述，请点击"查看角色"按钮获取详情。
+                暫無角色描述，請點擊"檢視角色"按鈕獲取詳情。
               </p>
             </div>
-            <div class="mt-2 text-xs text-blue-500 text-center sticky bottom-0 bg-white py-1">点击开始训练</div>
+            <div class="mt-2 text-xs text-blue-500 text-center sticky bottom-0 bg-white py-1">點擊開始訓練</div>
           </div>
         </div>
       </div>
@@ -100,7 +100,7 @@
       <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">创建自定义场景</h2>
+            <h2 class="text-2xl font-bold text-gray-800">創建自定義場景</h2>
             <button @click="showCustomSceneModal = false" class="text-gray-500 hover:text-gray-700">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -109,9 +109,29 @@
           </div>
           
           <form @submit.prevent="generateCustomScene">
+            <!-- 场景类型选择 -->
+            <div class="mb-4">
+              <label class="block text-gray-700 text-sm font-bold mb-2">場景類型</label>
+              <div class="flex flex-wrap gap-2">
+                <div 
+                  v-for="type in customSceneOptions.types" 
+                  :key="type.value"
+                  @click="customScene.type = type.value"
+                  :class="[
+                    'px-4 py-2 rounded-full cursor-pointer border transition-colors',
+                    customScene.type === type.value 
+                      ? 'bg-blue-500 text-white border-blue-500' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  ]"
+                >
+                  {{ type.label }}
+                </div>
+              </div>
+            </div>
+            
             <!-- 角色选择 -->
             <div class="mb-4">
-              <label class="block text-gray-700 text-sm font-bold mb-2">角色类型</label>
+              <label class="block text-gray-700 text-sm font-bold mb-2">角色類型</label>
               <div class="flex flex-wrap gap-2">
                 <div 
                   v-for="role in customSceneOptions.roles" 
@@ -130,11 +150,13 @@
             </div>
             
             <!-- 症状选择 -->
-            <div class="mb-4">
-              <label class="block text-gray-700 text-sm font-bold mb-2">主要症状</label>
+            <div class="mb-4" v-if="customScene.type">
+              <label class="block text-gray-700 text-sm font-bold mb-2">
+                {{ customScene.type === 'assistant_doctor' ? '情境' : '患者症状' }}
+              </label>
               <div class="flex flex-wrap gap-2">
                 <div 
-                  v-for="symptom in customSceneOptions.symptoms" 
+                  v-for="symptom in customSceneOptions.symptoms[customScene.type]" 
                   :key="symptom.value"
                   @click="toggleSymptom(symptom.value)"
                   :class="[
@@ -150,11 +172,13 @@
             </div>
             
             <!-- 病情程度 -->
-            <div class="mb-4">
-              <label class="block text-gray-700 text-sm font-bold mb-2">病情程度</label>
+            <div class="mb-4" v-if="customScene.type">
+              <label class="block text-gray-700 text-sm font-bold mb-2">
+                {{ customScene.type === 'assistant_doctor' ? '紧急程度' : '症状严重程度' }}
+              </label>
               <div class="flex flex-wrap gap-2">
                 <div 
-                  v-for="severity in customSceneOptions.severities" 
+                  v-for="severity in customSceneOptions.severities[customScene.type]" 
                   :key="severity.value"
                   @click="customScene.severity = severity.value"
                   :class="[
@@ -170,11 +194,13 @@
             </div>
             
             <!-- 患者情绪 -->
-            <div class="mb-4">
-              <label class="block text-gray-700 text-sm font-bold mb-2">患者情绪</label>
+            <div class="mb-4" v-if="customScene.type">
+              <label class="block text-gray-700 text-sm font-bold mb-2">
+                {{ customScene.type === 'assistant_doctor' ? '医生态度' : '患者情绪' }}
+              </label>
               <div class="flex flex-wrap gap-2">
                 <div 
-                  v-for="emotion in customSceneOptions.emotions" 
+                  v-for="emotion in customSceneOptions.emotions[customScene.type]" 
                   :key="emotion.value"
                   @click="customScene.emotion = emotion.value"
                   :class="[
@@ -191,12 +217,12 @@
             
             <!-- 自定义备注 -->
             <div class="mb-6">
-              <label class="block text-gray-700 text-sm font-bold mb-2">其他备注 (可选)</label>
+              <label class="block text-gray-700 text-sm font-bold mb-2">其他備註 (可選)</label>
               <textarea 
                 v-model="customScene.notes"
                 class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 rows="3"
-                placeholder="添加任何其他详细信息或特殊要求..."
+                placeholder="添加任何其他詳細信息或特殊要求..."
               ></textarea>
             </div>
             
@@ -206,7 +232,7 @@
                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:shadow-outline"
                 :disabled="isGenerating"
               >
-                {{ isGenerating ? '生成中...' : '开始训练' }}
+                {{ isGenerating ? '生成中...' : '開始訓練' }}
               </button>
             </div>
           </form>
@@ -219,7 +245,7 @@
       <div class="bg-white rounded-lg w-full max-w-lg">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">角色详情</h2>
+            <h2 class="text-2xl font-bold text-gray-800">角色詳情</h2>
             <button @click="showRoleModal = false" class="text-gray-500 hover:text-gray-700">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -229,18 +255,18 @@
           
           <div v-if="selectedScene">
             <div class="mb-4">
-              <h3 class="text-lg font-medium text-gray-700">场景标题</h3>
+              <h3 class="text-lg font-medium text-gray-700">場景標題</h3>
               <p class="mt-1">{{ selectedScene.scene_title }}</p>
             </div>
             
             <div class="mb-4">
               <h3 class="text-lg font-medium text-gray-700">您的角色</h3>
-              <p class="mt-1">{{ selectedScene.trainee_character || '医生' }}</p>
+              <p class="mt-1">{{ selectedScene.trainee_character || '醫生' }}</p>
             </div>
             
             <div class="mb-4">
               <h3 class="text-lg font-medium text-gray-700">角色描述</h3>
-              <pre class="mt-1 bg-gray-100 p-3 rounded text-sm overflow-auto max-h-60 whitespace-pre-wrap">{{ selectedScene.scene_description_charactor || '暂无描述' }}</pre>
+              <pre class="mt-1 bg-gray-100 p-3 rounded text-sm overflow-auto max-h-60 whitespace-pre-wrap">{{ selectedScene.scene_description_charactor || '暫無描述' }}</pre>
             </div>
           </div>
         </div>
@@ -266,38 +292,70 @@ const showDebug = ref(false); // 调试模式
 
 // 自定义场景选项
 const customSceneOptions = {
+  types: [
+    { label: '医生对病人', value: 'doctor_patient' },
+    { label: '助理对医生', value: 'assistant_doctor' },
+  ],
   roles: [
     { label: '脑外科医生', value: 'brain_surgeon' },
     { label: '急诊科医生', value: 'emergency_doctor' },
     { label: '妇产科医生', value: 'gynecologist' },
     { label: '麻醉师', value: 'anesthesiologist' },
   ],
-  symptoms: [
-    { label: '头痛', value: 'headache' },
-    { label: '头晕', value: 'dizziness' },
-    { label: '恶心', value: 'nausea' },
-    { label: '腹痛', value: 'abdominal_pain' },
-    { label: '出血', value: 'bleeding' },
-    { label: '发热', value: 'fever' },
-    { label: '视力模糊', value: 'blurred_vision' },
-  ],
-  severities: [
-    { label: '轻微', value: 'mild' },
-    { label: '中等', value: 'moderate' },
-    { label: '严重', value: 'severe' },
-    { label: '紧急', value: 'emergency' },
-  ],
-  emotions: [
-    { label: '平静', value: 'calm' },
-    { label: '焦虑', value: 'anxious' },
-    { label: '恐惧', value: 'fearful' },
-    { label: '愤怒', value: 'angry' },
-    { label: '悲伤', value: 'sad' },
-  ],
+  symptoms: {
+    doctor_patient: [
+      { label: '头痛', value: 'headache' },
+      { label: '头晕', value: 'dizziness' },
+      { label: '恶心', value: 'nausea' },
+      { label: '腹痛', value: 'abdominal_pain' },
+      { label: '出血', value: 'bleeding' },
+      { label: '发热', value: 'fever' },
+      { label: '视力模糊', value: 'blurred_vision' },
+    ],
+    assistant_doctor: [
+      { label: '手术准备', value: 'surgery_prep' },
+      { label: '术中配合', value: 'during_surgery' },
+      { label: '紧急护理', value: 'emergency_care' },
+      { label: '病例讨论', value: 'case_discussion' },
+      { label: '病房巡诊', value: 'ward_rounds' },
+      { label: '医技配合', value: 'technical_support' },
+    ]
+  },
+  severities: {
+    doctor_patient: [
+      { label: '轻微', value: 'mild' },
+      { label: '中等', value: 'moderate' },
+      { label: '严重', value: 'severe' },
+      { label: '紧急', value: 'emergency' },
+    ],
+    assistant_doctor: [
+      { label: '常规', value: 'routine' },
+      { label: '急诊', value: 'urgent' },
+      { label: '危重', value: 'critical' },
+      { label: '教学', value: 'teaching' },
+    ]
+  },
+  emotions: {
+    doctor_patient: [
+      { label: '平静', value: 'calm' },
+      { label: '焦虑', value: 'anxious' },
+      { label: '恐惧', value: 'fearful' },
+      { label: '愤怒', value: 'angry' },
+      { label: '悲伤', value: 'sad' },
+    ],
+    assistant_doctor: [
+      { label: '专业严肃', value: 'professional' },
+      { label: '耐心指导', value: 'patient' },
+      { label: '紧急催促', value: 'urgent' },
+      { label: '严厉批评', value: 'strict' },
+      { label: '和蔼亲切', value: 'friendly' },
+    ]
+  },
 };
 
 // 自定义场景数据
 const customScene = ref({
+  type: '',
   role: '',
   symptoms: [],
   severity: '',
@@ -316,25 +374,34 @@ const toggleSymptom = (symptom) => {
 
 // 生成自定义场景并添加到列表
 const generateCustomScene = async () => {
-  if (!customScene.value.role || customScene.value.symptoms.length === 0 || !customScene.value.severity || !customScene.value.emotion) {
-    alert('请完善场景信息');
+  if (!customScene.value.type || !customScene.value.role || customScene.value.symptoms.length === 0 || !customScene.value.severity || !customScene.value.emotion) {
+    alert('請完善場景信息');
     return;
   }
   
   isGenerating.value = true;
   
   try {
+    // 映射场景类型值到API使用的类型
+    const sceneTypeMap = {
+      'doctor_patient': '医生对病人',
+      'assistant_doctor': '助理对医生'
+    };
+    
     // 构建提示词
-    const prompt = `生成一个医患对话场景，设定如下：
+    const prompt = `生成一个${customScene.value.type === 'assistant_doctor' ? '医助交互' : '医患对话'}场景，设定如下：
       - 医生角色：${getLabelByValue(customSceneOptions.roles, customScene.value.role)}
-      - 患者症状：${customScene.value.symptoms.map(s => getLabelByValue(customSceneOptions.symptoms, s)).join('、')}
-      - 症状严重程度：${getLabelByValue(customSceneOptions.severities, customScene.value.severity)}
-      - 患者情绪：${getLabelByValue(customSceneOptions.emotions, customScene.value.emotion)}
+      - ${customScene.value.type === 'assistant_doctor' ? '情境' : '患者症状'}：${customScene.value.symptoms.map(s => getLabelByValue(customSceneOptions.symptoms[customScene.value.type], s)).join('、')}
+      - ${customScene.value.type === 'assistant_doctor' ? '紧急程度' : '症状严重程度'}：${getLabelByValue(customSceneOptions.severities[customScene.value.type], customScene.value.severity)}
+      - ${customScene.value.type === 'assistant_doctor' ? '医生态度' : '患者情绪'}：${getLabelByValue(customSceneOptions.emotions[customScene.value.type], customScene.value.emotion)}
       ${customScene.value.notes ? `- 其他备注：${customScene.value.notes}` : ''}
     `;
     
     // 调用API生成场景描述
-    const response = await axios.post('/api/generate-custom-scene', { prompt });
+    const response = await axios.post('/api/generate-custom-scene', { 
+      prompt,
+      scene_type: sceneTypeMap[customScene.value.type] || '医生对病人'
+    });
     
     if (response.data.success) {
       // 获取生成的场景数据
@@ -348,6 +415,7 @@ const generateCustomScene = async () => {
       
       // 重置表单
       customScene.value = {
+        type: '',
         role: '',
         symptoms: [],
         severity: '',

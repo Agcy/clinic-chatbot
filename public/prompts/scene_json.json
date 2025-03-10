@@ -7,7 +7,7 @@
 		"scene_description_charactor": "你是一名外科医生助手（江满月），正在协助脑外科主刀医生（程至美）进行一场复杂的脑部手术。你的角色是按照主刀医生的指令进行配合，例如提供手术器械、监测病人状况（如血压）、并适时向医生汇报手术进展。在手术过程中，你可能需要向医生请教手术步骤或提供观察报告。请用粤语与医生交流，保持专业，并专注于手术过程。",
 		"model_charactor": "腦外科主刀醫生程至美",
 		"trainee_character": "外科医生助手江满月",
-		"scene_type": "医生对助手",
+		"scene_type": "助手对医生",
 		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 	},

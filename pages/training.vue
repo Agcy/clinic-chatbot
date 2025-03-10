@@ -7,13 +7,13 @@
         <div class="prompt-card-header" @click="toggleCard">
           <h3 class="prompt-card-title">角色提示</h3>
           <span class="prompt-card-toggle">
-            {{ isCardCollapsed ? '展开 ▼' : '收起 ▲' }}
+            {{ isCardCollapsed ? '展開 ▼' : '收起 ▲' }}
           </span>
         </div>
         <div class="prompt-card-content" v-if="!isCardCollapsed">
-          <div class="prompt-card-role">您的角色: <span>{{ currentScene?.trainee_character || '医生' }}</span></div>
+          <div class="prompt-card-role">您的角色: <span>{{ currentScene?.trainee_character || '醫生' }}</span></div>
           <div class="prompt-card-description">
-            {{ currentScene?.scene_description_charactor || '加载中...' }}
+            {{ currentScene?.scene_description_charactor || '加載中...' }}
           </div>
         </div>
       </div>
