@@ -8,8 +8,8 @@
 		"model_charactor": "腦外科主刀醫生程至美",
 		"trainee_character": "外科医生助手江满月",
 		"scene_type": "助手对医生",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/doctor.glb"
 	},
 	{
 		"scene_id": "vascular_tumor_001",
@@ -20,8 +20,8 @@
 		"model_charactor": "病人唐",
 		"trainee_character": "脑外科医生",
 		"scene_type": "医生对病人",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/patient.glb"
 	},
 	{
 		"scene_id": "after_xray_001",
@@ -32,8 +32,8 @@
 		"model_charactor": "病人卓敏",
 		"trainee_character": "医生（唐、黎）",
 		"scene_type": "医生对病人",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/patient.glb"
 	},
 	{
 		"scene_id": "gynecology_examination_001",
@@ -44,8 +44,8 @@
 		"model_charactor": "病人周小姐",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/patient.glb"
 	},
 	{
 		"scene_id": "gynecology_abdominal_pain_001",
@@ -56,8 +56,8 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/patient.glb"
 	},
 	{
 		"scene_id": "gynecology_hospitalization_001",
@@ -68,7 +68,7 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"scene_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-		"charactor_url_3d": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+		"scene_url_3d": "/model/operating-room.fbx",
+		"charactor_url_3d": "/model/patient.glb"
 	}
 ]
