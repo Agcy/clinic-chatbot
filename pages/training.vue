@@ -19,19 +19,16 @@
       </div>
     </div>
     
-    <ThreeDCharacter ref="characterRef" />
-    <ChatBoxComponent :character-ref="characterRef" :current-scene="currentScene" />
+    <ChatBoxComponent />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import ThreeDCharacter from "@/components/ThreeDCharacter.vue";
 import ChatBoxComponent from "@/components/ChatBoxComponent.vue";
 
 const router = useRouter();
-const characterRef = ref(null);
 const currentScene = ref(null);
 const isCardCollapsed = ref(false);
 

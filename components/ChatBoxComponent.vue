@@ -1,106 +1,124 @@
+/**
+ * @fileoverview 聊天框组件
+ */
+
 <template>
-  <div class="chat-box fixed inset-x-0 bottom-0 bg-transparent p-4 pb-10">
-    <div class="max-w-md mx-auto bg-transparent rounded-lg shadow-none overflow-visible">
-      <div class="p-3 pb-2">
-        <transition-group name="fade" tag="div">
+  <div class="chat-box fixed inset-x-0 bottom-0 p-4 pb-10 flex justify-center">
+    <div class="w-[600px] rounded-2xl shadow-2xl overflow-visible bg-gradient-to-b from-white/90 to-white/80 backdrop-blur">
+      <!-- 消息容器 -->
+      <div class="messages-container h-[70vh] overflow-y-auto p-4 mb-2 rounded-t-2xl">
+        <transition-group name="fade" tag="div" class="space-y-4">
           <div
-              v-for="(msg, index) in visibleMessages"
+              v-for="(msg, index) in messages"
               :key="msg.id"
-              class="message mb-3 p-2 rounded-lg"
-              :class="msg.from === 'user' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'"
+              class="message p-4 rounded-2xl transform transition-all duration-300 hover:scale-[1.02] flex flex-col"
+              :class="[
+                msg.from === 'user' ? 'items-end' : 'items-start',
+                'w-full'
+              ]"
           >
-            {{ msg.text }}
+            <div
+              class="message-content px-6 py-4 rounded-2xl max-w-[85%]"
+              :class="msg.from === 'user' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'"
+            >
+              {{ msg.text }}
+            </div>
           </div>
         </transition-group>
         
         <!-- 评估结果显示区域 -->
-        <div v-if="showEvaluation" class="evaluation-results bg-yellow-50 text-gray-800 rounded-lg p-3 my-2 border border-yellow-200">
-          <h3 class="text-lg font-semibold mb-2">訓練評估結果</h3>
-          <div class="rating flex items-center mb-2">
-            <span class="mr-2">評分:</span>
-            <div class="rating-stars flex">
+        <div v-if="showEvaluation" class="evaluation-results bg-gradient-to-r from-yellow-50 to-orange-50 text-gray-800 rounded-2xl p-4 my-3 border border-yellow-200 shadow-lg">
+          <h3 class="text-lg font-bold mb-3 text-yellow-700">訓練評估結果</h3>
+          <div class="rating flex items-center mb-3">
+            <span class="mr-2 font-medium">評分:</span>
+            <div class="rating-stars flex items-center bg-white px-3 py-1 rounded-full shadow-sm">
               <span 
                 v-for="i in 10" 
                 :key="i" 
-                :class="i <= evaluationRating ? 'text-yellow-500' : 'text-gray-300'"
+                :class="[
+                  'transition-all duration-300 transform',
+                  i <= evaluationRating ? 'text-yellow-400 scale-110' : 'text-gray-300'
+                ]"
               >★</span>
-              <span class="ml-2 font-bold">{{ evaluationRating }}/10</span>
+              <span class="ml-2 font-bold text-yellow-600">{{ evaluationRating }}/10</span>
             </div>
           </div>
-          <div class="evaluation-msg">
-            <p class="text-sm font-medium">改進建議:</p>
-            <p class="text-sm">{{ evaluationMsg }}</p>
+          <div class="evaluation-msg bg-white rounded-xl p-3 shadow-inner">
+            <p class="text-sm font-medium text-gray-700 mb-1">改進建議:</p>
+            <p class="text-sm text-gray-600 leading-relaxed">{{ evaluationMsg }}</p>
           </div>
         </div>
       </div>
-      <div class="bg-transparent p-3 pt-2 pb-8">
-        <form @submit.prevent="sendMessage">
-          <div class="flex flex-col md:flex-row items-center gap-3">
+
+      <!-- 输入区域 -->
+      <div class="p-4 pt-2 pb-4 border-t border-gray-200/50">
+        <form @submit.prevent="sendMessage" class="space-y-3">
+          <div class="relative">
             <input
                 v-model="userInput"
                 type="text"
-                placeholder="Type a message"
-                class="w-full md:flex-1 border border-gray-300 rounded-full px-4 py-2"
+                placeholder="输入消息..."
+                class="w-full px-6 py-4 bg-white/90 border border-gray-200 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 outline-none"
                 :disabled="trainingFinished"
             />
-            <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
-              <!-- 训练中按钮组 -->
-              <template v-if="!trainingFinished">
-                <button
-                    type="button"
-                    @click="startRecording"
-                    :disabled="isRecording"
-                    class="h-12 min-w-[4.5rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
-                >
-                  🎤 {{ isRecording ? "录音中" : "语音" }}
-                </button>
-                <button
-                    type="button"
-                    @click="stopRecording"
-                    :disabled="!isRecording"
-                    class="h-12 min-w-[4.5rem] bg-red-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
-                >
-                  🛑 停止
-                </button>
-                <button
-                    type="button"
-                    @click="finishTraining"
-                    :disabled="isEvaluating || messages.length === 0"
-                    class="h-12 min-w-[6rem] bg-purple-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
-                >
-                  ✓ 完成训练
-                </button>
-              </template>
-              
-              <!-- 训练后按钮组 -->
-              <template v-else>
-                <button
-                    v-if="!showEvaluation"
-                    type="button"
-                    @click="evaluateConversation"
-                    :disabled="isEvaluating"
-                    class="h-12 min-w-[6rem] bg-blue-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
-                >
-                  📝 {{ isEvaluating ? "評估中" : "評估" }}
-                </button>
-                <button
-                    v-else
-                    type="button"
-                    @click="resetTraining"
-                    class="h-12 min-w-[6rem] bg-green-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md mr-2"
-                >
-                  🔄 再次訓練
-                </button>
-                <button
-                    v-if="showEvaluation"
-                    type="button"
-                    @click="goToHome"
-                    class="h-12 min-w-[6rem] bg-purple-500 text-white px-2 rounded-full flex items-center justify-center text-sm whitespace-nowrap shadow-md"
-                >
-                  🏠 回到主頁
-                </button>
-              </template>
-            </div>
+          </div>
+          <div class="flex flex-wrap justify-center gap-3">
+            <!-- 训练中按钮组 -->
+            <template v-if="!trainingFinished">
+              <button
+                  type="button"
+                  @click="startRecording"
+                  :disabled="isRecording"
+                  class="btn-primary bg-gradient-to-r from-green-500 to-green-600"
+              >
+                🎤 {{ isRecording ? "录音中" : "语音" }}
+              </button>
+              <button
+                  type="button"
+                  @click="stopRecording"
+                  :disabled="!isRecording"
+                  class="btn-primary bg-gradient-to-r from-red-500 to-red-600"
+              >
+                🛑 停止
+              </button>
+              <button
+                  type="button"
+                  @click="finishTraining"
+                  :disabled="isEvaluating || messages.length === 0"
+                  class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600"
+              >
+                ✓ 完成训练
+              </button>
+            </template>
+            
+            <!-- 训练后按钮组 -->
+            <template v-else>
+              <button
+                  v-if="!showEvaluation"
+                  type="button"
+                  @click="evaluateConversation"
+                  :disabled="isEvaluating"
+                  class="btn-primary bg-gradient-to-r from-blue-500 to-blue-600"
+              >
+                📝 {{ isEvaluating ? "評估中" : "評估" }}
+              </button>
+              <button
+                  v-else
+                  type="button"
+                  @click="resetTraining"
+                  class="btn-primary bg-gradient-to-r from-green-500 to-green-600 mr-2"
+              >
+                🔄 再次訓練
+              </button>
+              <button
+                  v-if="showEvaluation"
+                  type="button"
+                  @click="goToHome"
+                  class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600"
+              >
+                🏠 回到主頁
+              </button>
+            </template>
           </div>
         </form>
       </div>
@@ -109,22 +127,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import axios from 'axios';
-import ThreeDCharacter from '@/components/ThreeDCharacter.vue';
 import { useRouter } from 'vue-router';
-
-// 定义props接收父组件传来的characterRef和currentScene
-const props = defineProps({
-  characterRef: {
-    type: Object,
-    default: null
-  },
-  currentScene: {
-    type: Object,
-    required: true
-  }
-});
 
 const router = useRouter();
 
@@ -141,7 +146,19 @@ const evaluationMsg = ref("");
 let mediaRecorder;
 let audioChunks = [];
 
-const visibleMessages = ref([]);
+// 滚动到底部
+const scrollToBottom = async () => {
+  await nextTick();
+  const container = document.querySelector('.messages-container');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+};
+
+// 监听消息变化，自动滚动到底部
+watch(messages, () => {
+  scrollToBottom();
+}, { deep: true });
 
 const sendMessage = async () => {
   const userMessage = userInput.value.trim();
@@ -156,19 +173,13 @@ const sendMessage = async () => {
   };
 
   messages.value.push(newMessage);
-  visibleMessages.value.push(newMessage);
-
-  if (visibleMessages.value.length > 2) {
-    visibleMessages.value.shift();
-  }
-
   userInput.value = "";
 
   try {
     console.log('Sending message to API:', userMessage);
     const aiResponse = await axios.post("/api/bailian", { 
         message: userMessage,
-        systemPrompt: props.currentScene.scene_description_model
+        systemPrompt: "你是一位经验丰富的医生，正在接受培训者的问诊训练。请根据培训者的问题，给出专业、耐心的回答。"
     });
     const reply = aiResponse?.data?.response || "I didn't understand that.";
     const aiMessage = {
@@ -177,7 +188,6 @@ const sendMessage = async () => {
       from: 'ai'
     };
     messages.value.push(aiMessage);
-    visibleMessages.value.push(aiMessage);
 
     // Convert AI response to speech
     const speechResponse = await axios.post("/api/text-to-speech", { text: reply });
@@ -188,11 +198,6 @@ const sendMessage = async () => {
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
     audio.play();
-
-    // Trigger speaking animation
-    if (props.characterRef?.value) {
-      props.characterRef.value.speak(reply);
-    }
   } catch (error) {
     console.error('Error sending message:', error);
     alert('發送消息失敗：' + error.message);
@@ -366,7 +371,6 @@ const evaluateConversation = async () => {
  */
 const resetTraining = () => {
   messages.value = [];
-  visibleMessages.value = [];
   trainingFinished.value = false;
   showEvaluation.value = false;
   evaluationRating.value = 0;
@@ -382,38 +386,90 @@ const goToHome = () => {
 
 <style scoped>
 .chat-box {
-  z-index: 2; /* 确保聊天框在3D模型之上 */
-  backdrop-filter: blur(10px); /* 添加模糊效果 */
-  padding-bottom: 4rem; /* 增加底部间距，确保按钮完全可见 */
-  margin-bottom: 1.5rem; /* 添加外边距，防止内容被底部导航栏遮挡 */
+  z-index: 2;
+  padding-bottom: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 添加响应式样式 */
+@media (max-width: 768px) {
+  .chat-box {
+    padding: 0.5rem;
+  }
+  
+  .chat-box > div {
+    width: 100%;
+  }
+}
+
+.messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.messages-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
 }
 
 .message {
-  transition: opacity 0.5s ease; /* 淡入淡出效果 */
+  transition: all 0.3s ease;
+  word-wrap: break-word;
 }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease;
+.message-content {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.fade-enter-from, .fade-leave-to {
+.btn-primary {
+  @apply h-10 min-w-[4.5rem] text-white px-4 rounded-xl flex items-center justify-center text-sm font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from {
   opacity: 0;
+  transform: translateY(20px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 
 .evaluation-results {
-  animation: fadeIn 0.5s ease;
+  animation: slideIn 0.5s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 移动设备上的响应式调整 */
-@media (max-width: 640px) {
-  .chat-box {
-    padding-bottom: 5rem;
-    margin-bottom: 2rem;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 添加鼠标悬停效果 */
+.message-content:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 输入框激活状态 */
+input:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 </style>

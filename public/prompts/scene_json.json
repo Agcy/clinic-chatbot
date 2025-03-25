@@ -70,5 +70,17 @@
 		"scene_type": "医生对病人",
 		"scene_url_3d": "",
 		"charactor_url_3d": "/model/patient.glb"
+	},
+	{
+		"scene_id": "gastroenterology_abdominal_pain_001",
+		"card_img": "/assets/img.png",
+		"scene_title": "腸胃科診症 - 腹痛病人",
+		"scene_description_model": "你是一名病人，最近三週出現腹痛症狀，主要集中在肚臍附近，偶爾背部也會不適。你的排便比平時硬，但沒有腹瀉或便血。你平時飲水充足但很少運動，經常久坐玩手機。你需要向醫生描述這些症狀，並回應醫生的檢查。當醫生按壓你的腹部時，你會感到疼痛，特別是在肚臍左側。請用粵語與醫生交談，並表現出對病情的關注和對進一步檢查的詢問。",
+		"scene_description_charactor": "你是一名腸胃科醫生（張醫生），正在為一位出現腹痛症狀的病人進行診症。你需要詳細詢問病人的症狀，包括疼痛位置、持續時間、排便情況等。在體檢過程中，你會發現病人的肚臍左側有壓痛。你需要專業地解釋可能的診斷（腸胃功能紊亂），並建議進行抽血檢查和藥物治療，同時說明如果症狀惡化可能需要進行腸鏡檢查。",
+		"model_charactor": "病人陳先生",
+		"trainee_character": "腸胃科醫生張醫生",
+		"scene_type": "医生对病人",
+		"scene_url_3d": "",
+		"charactor_url_3d": "/model/patient.glb"
 	}
 ]

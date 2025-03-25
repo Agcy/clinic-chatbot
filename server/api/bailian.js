@@ -1,29 +1,73 @@
 /**
- * @fileoverview 百炼API接口
+ * @fileoverview 自定义模型API接口
  */
 
 import { defineEventHandler, readBody } from 'h3';
-import OpenAI from "openai";
 import { Conversation } from '../models/conversation';
 import { connectDB, getConnectionStatus } from '../utils/db';
 
-const openai = new OpenAI({
-    apiKey: process.env.ALIYUN_BAILIAN_API_KEY, // 确保设置了环境变量
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-});
+// 用于存储对话历史的Map
+const conversationHistory = new Map();
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
+    
+    console.log('Received request body:', JSON.stringify(body, null, 2));
 
-    // console.log('Received request with body:', body);
-
-    // 验证请求体中的消息是否有效
-    if (!body || typeof body.message !== 'string' || body.message.trim() === '') {
-        console.error('Invalid message provided');
-        return { error: 'Invalid message provided' };
+    // 验证请求体是否有效
+    if (!body) {
+        console.error('No body provided');
+        return { error: 'No body provided' };
     }
 
-    const { message, userId, scenarioId, shouldSave = false, messages = [], rating = null, systemPrompt } = body;
+    let messages;
+    const conversationId = body.conversationId || 'default';
+    
+    // 处理新旧两种格式
+    if (body.messages && Array.isArray(body.messages)) {
+        // 新格式：直接使用 messages 数组
+        messages = body.messages;
+    } else if (body.message) {
+        // 获取或初始化对话历史
+        let history = conversationHistory.get(conversationId) || [];
+        
+        // 如果是新对话，添加系统提示
+        if (history.length === 0) {
+            history.push({
+                role: "system",
+                content: body.systemPrompt || "你是一名經驗豐富的腦外科主刀醫生（程至美），正在進行一場高風險的腦部手術。你的助手（江医生）正在協助你完成手術。你的目標是確保手術順利進行，並適時指導助手提供器械或進行必要的協助。你應該保持專業、冷靜，並清晰地描述手術步驟。在助手詢問問題時，你可以耐心解釋，但要確保手術的精確性。請用粵語進行對話，並嚴格按照角色演繹。"
+            });
+        }
+
+        // 添加用户新消息
+        history.push({
+            role: "user",
+            content: body.message
+        });
+
+        // 更新对话历史
+        conversationHistory.set(conversationId, history);
+        messages = history;
+    } else {
+        console.error('Invalid request format');
+        return { error: 'Invalid request format' };
+    }
+
+    // 验证消息格式
+    if (messages.length === 0) {
+        console.error('Messages array is empty');
+        return { error: 'Messages array cannot be empty' };
+    }
+
+    for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        if (!msg.role || !msg.content) {
+            console.error(`Invalid message format at index ${i}:`, msg);
+            return { error: `Invalid message format at index ${i}` };
+        }
+    }
+
+    const { userId, scenarioId, shouldSave = false, rating = null } = body;
 
     try {
         // 如果是保存对话记录的请求
@@ -49,26 +93,60 @@ export default defineEventHandler(async (event) => {
 
             await conversation.save();
             console.log('对话记录已保存');
+            
+            // 保存后清除内存中的对话历史
+            conversationHistory.delete(conversationId);
+            
             return { success: true, message: '对话记录已保存' };
         }
 
         // 如果是普通的对话请求
-        const completion = await openai.chat.completions.create({
-            model: "qwen-plus", // 使用 qwen-plus 模型
-            messages: [
-                { 
-                    role: "system", 
-                    content: systemPrompt || "你是一个病人，你最近出现了头晕、头痛的症状，并且曾经历过一次交通意外。医生刚刚通过 MRI 发现你的脑部有一个血管瘤。你对自己的健康状况感到担忧，并且想要弄清楚医生的诊断结果。你可能会问医生更多关于病情、最坏情况和治疗方案的问题（如：'这个瘤会不会爆裂？'、'最坏的可能是什么？'）。请用粤语与医生交谈，并尽可能表现出真实病人的反应，例如焦虑、疑惑或希望得到更多信息。不要脱离角色，现在请开始你的第一句话。"
-                },
-                { role: "user", content: message }
-            ],
+        console.log('Sending messages to API:', JSON.stringify(messages, null, 2));
+        
+        // 构建请求体
+        const requestBody = {
+            model: "string", // 这里可以根据需要修改模型名称
+            messages: messages,
+            do_sample: true,
+            temperature: 0.92,
+            top_p: 0,
+            n: 1,
+            max_tokens: 512,
+            stream: false
+        };
+
+        // 发送请求到自定义模型API
+        const response = await fetch('http://117.50.34.201:8000/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
         });
 
-        // console.log('Received response from Bailian API:', completion);
-        const responseText = completion.choices[0].message.content;
-        // console.log('Returning response:', responseText)
+        if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
 
-        return { response: responseText };
+        const completion = await response.json();
+        const responseText = completion.choices[0].message.content;
+
+        // 将AI的回复添加到对话历史中
+        if (body.message) { // 只在旧格式下更新历史
+            const history = conversationHistory.get(conversationId);
+            if (history) {
+                history.push({
+                    role: "assistant",
+                    content: responseText
+                });
+                conversationHistory.set(conversationId, history);
+            }
+        }
+
+        return { 
+            response: responseText,
+            conversationId: conversationId // 返回会话ID，前端需要保存
+        };
     } catch (error) {
         console.error('Error:', error);
         return { error: error.message };
