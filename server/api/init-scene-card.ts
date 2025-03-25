@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     
     // 创建测试数据
     const testData = {
-      scene_url_3d: '/model/operating-room.fbx',
+      scene_url_3d: '',
       charactor_url_3d: '/model/doctor.glb',
       created_at: new Date(),
       updated_at: new Date()

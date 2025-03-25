@@ -7,6 +7,7 @@ import OpenAI from "openai";
 import dotenv from 'dotenv';
 import { Scene } from '../models/scene';
 import { connectDB, getConnectionStatus } from '../utils/db';
+import { cleanMarkdownJson } from '../utils/openai-helpers';
 
 dotenv.config();
 
@@ -99,8 +100,11 @@ export default defineEventHandler(async (event) => {
     let sceneData;
 
     try {
-      // 尝试解析JSON
-      sceneData = JSON.parse(aiResponseContent);
+      // 使用辅助函数清理 Markdown 格式的 JSON
+      const cleanedContent = cleanMarkdownJson(aiResponseContent);
+      
+      // 尝试解析 JSON
+      sceneData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error('解析AI响应失败:', parseError);
       console.log("aiResponseContent: " + aiResponseContent);

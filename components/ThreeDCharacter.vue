@@ -31,10 +31,10 @@ const initScene = (container) => {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  // 相机配置
+  // 相机配置 - 降低相机高度
   camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-  camera.position.set(0, 5, 8);
-  camera.lookAt(new THREE.Vector3(0, 3, 0));
+  camera.position.set(0, 2, 5); // 将z值从3增加到5，拉远相机距离
+  camera.lookAt(new THREE.Vector3(0, 2, 0)); // 调整lookAt位置，使其对准人物脸部
 
   // 光源配置
   const ambientLight = new THREE.AmbientLight(0xffffff, 2);
@@ -63,6 +63,12 @@ const isFbxFormat = (url) => {
  * @param {string} url - 场景URL
  */
 const loadScene = async (url) => {
+  // 如果URL为空，跳过场景加载
+  if (!url || url.trim() === '') {
+    console.log('场景URL为空，跳过场景加载');
+    return;
+  }
+  
   try {
     console.log(`加载场景: ${url}`);
     
@@ -127,7 +133,18 @@ const loadCharacter = async (url) => {
     }
     
     character = characterObj;
-    character.scale.set(0.1, 0.1, 0.1);
+    
+    // 根据模型URL调整缩放比例
+    if (url.includes('patient.glb')) {
+      // 为病人模型调整缩放比例
+      character.scale.set(0.25, 0.25, 0.25);
+      // 可能需要调整位置
+      character.position.set(0, 0, 0);
+    } else {
+      // 其他模型使用默认缩放
+      character.scale.set(0.2, 0.2, 0.2);
+    }
+    
     scene.add(character);
 
     // 获取模型部件
@@ -239,10 +256,50 @@ onMounted(async () => {
     }
     
     const { sceneUrl, characterUrl } = await response.json();
+    console.log('获取到的URL:', { sceneUrl, characterUrl });
     
-    // 加载场景和角色
-    await loadScene(sceneUrl);
-    await loadCharacter(characterUrl);
+    // 检查场景URL是否为空
+    if (!sceneUrl || sceneUrl.trim() === '') {
+      console.log('场景URL为空，将只加载角色和地面');
+      
+      // 添加一个简单的地面
+      const groundGeometry = new THREE.PlaneGeometry(20, 20);
+      const groundMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xcccccc,
+        roughness: 0.8
+      });
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.rotation.x = -Math.PI / 2; // 使平面水平
+      ground.position.y = 0;
+      ground.receiveShadow = true;
+      scene.add(ground);
+    } else {
+      // 加载场景
+      await loadScene(sceneUrl);
+    }
+    
+    // 加载角色
+    if (characterUrl && characterUrl.trim() !== '') {
+      await loadCharacter(characterUrl);
+      
+      // 如果没有场景，调整相机位置以对准角色
+      if (!sceneUrl || sceneUrl.trim() === '') {
+        // 获取角色的包围盒
+        const box = new THREE.Box3().setFromObject(character);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        
+        console.log('角色位置:', center);
+        console.log('角色尺寸:', size);
+        
+        // 设置相机位置，调整高度以对准脸部
+        // 假设模型的头部/脸部位于模型高度的70%-80%处
+        const faceHeight = center.y + size.y * 0.3; // 调整这个系数可以更精确地定位脸部
+        camera.position.set(0, faceHeight, 30); // 将z值从3增加到5，拉远相机距离
+        camera.lookAt(new THREE.Vector3(center.x, faceHeight, center.z));
+        console.log('已调整相机位置:', camera.position);
+      }
+    }
     
     // 开始动画循环
     animate();

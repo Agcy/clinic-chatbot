@@ -1,0 +1,26 @@
+@startuml
+actor Trainee
+participant System
+
+== Select Dialogue Partner ==
+Trainee -> System: Select dialogue partner (e.g., "Patient")
+
+== Retrieve Scene Options ==
+System -> System: Retrieve scene options from database
+
+== Return Scene Options ==
+System -> Trainee: Return scene options (e.g., as buttons)
+
+== Select Specific Scene ==
+Trainee -> System: Select a specific scene (e.g., click a button)
+
+== Generate Script and Instructions ==
+System -> System: Generate dialogue script and instruction prompt
+
+== Return Script and Instructions ==
+System -> Trainee: Return script and instruction prompt
+
+== Read Script and Prepare ==
+Trainee -> Trainee: Read script and prepare for training
+
+@enduml

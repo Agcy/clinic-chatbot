@@ -1,0 +1,46 @@
+@startuml
+actor Trainee
+participant System
+participant "STT Model" as STT
+participant "Dialogue LLM" as DLLM
+participant "TTS Model" as TTS
+participant "Evaluation LLM" as ELLM
+
+== 1. Select Scenario ==
+Trainee -> System: Select Scenario
+
+== 2. Retrieve Script and Instruction ==
+System -> System: Retrieve Script and Instruction
+
+== 3. Read Script ==
+Trainee -> Trainee: Read Script
+
+== 4. Start Dialogue Training ==
+Trainee -> System: Start Dialogue
+loop Dialogue Continues
+    Trainee -> System: Send Voice
+    System -> STT: Convert Voice to Text
+    STT -> System: Return Text
+    System -> DLLM: Send Text and Instruction
+    DLLM -> System: Return Response Text
+    System -> TTS: Convert Text to Voice
+    TTS -> System: Return Voice
+    System -> Trainee: Send Response Text and Voice
+end
+
+== 5. End Training and Request Evaluation ==
+Trainee -> System: End Training and Request Evaluation
+
+== 6. Perform Evaluation ==
+System -> ELLM: Send Dialogue Record and Script
+ELLM -> System: Return Score and Feedback
+
+== 7. Display Results and Select Next Step ==
+System -> Trainee: Display Score and Feedback
+alt Select Retraining
+    Trainee -> System: Select Retraining
+else Select End
+    Trainee -> System: Select End
+end
+
+@enduml
