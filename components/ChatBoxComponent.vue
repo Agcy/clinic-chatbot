@@ -127,11 +127,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import axios from 'axios';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
+const route = useRoute();
 
 const messages = ref([]);
 const userInput = ref("");
@@ -142,9 +143,129 @@ const isEvaluating = ref(false);
 const showEvaluation = ref(false);
 const evaluationRating = ref(0);
 const evaluationMsg = ref("");
+const currentSceneId = ref(null);
 
 let mediaRecorder;
 let audioChunks = [];
+let storageListener = null;
+
+// 清空聊天记录
+const clearChat = async () => {
+  console.log('清空聊天记录');
+  messages.value = [];
+  userInput.value = "";
+  isRecording.value = false;
+  audioBlob.value = null;
+  trainingFinished.value = false;
+  isEvaluating.value = false;
+  showEvaluation.value = false;
+  evaluationRating.value = 0;
+  evaluationMsg.value = "";
+  audioChunks = [];
+  
+  // 停止录音（如果在录音中）
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  
+  // 清除服务器端的对话历史
+  await clearServerHistory();
+};
+
+// 清除服务器端对话历史
+const clearServerHistory = async () => {
+  if (process.client) {
+    try {
+      // 清除默认对话
+      await axios.post("/api/bailian", { 
+        action: 'clearHistory',
+        conversationId: 'default'
+      });
+      console.log('服务器端对话历史已清除');
+    } catch (error) {
+      console.error('清除服务器端对话历史失败:', error);
+    }
+  }
+};
+
+// 检查场景是否改变
+const checkSceneChange = async () => {
+  try {
+    // 确保只在客户端环境中访问localStorage
+    if (process.client) {
+      const sceneData = localStorage.getItem('currentScene');
+      if (sceneData) {
+        const scene = JSON.parse(sceneData);
+        // 如果场景ID改变，则清空聊天
+        if (scene._id !== currentSceneId.value) {
+          currentSceneId.value = scene._id;
+          await clearChat();
+        }
+      } else {
+        // 如果没有场景数据，也清空聊天
+        currentSceneId.value = null;
+        await clearChat();
+      }
+    }
+  } catch (error) {
+    console.error('检查场景变化时出错:', error);
+  }
+};
+
+// 监听localStorage变化
+const setupStorageListener = () => {
+  // 确保只在客户端环境中设置事件监听
+  if (process.client) {
+    storageListener = (event) => {
+      if (event.key === 'currentScene') {
+        checkSceneChange().catch(error => {
+          console.error('Storage listener error:', error);
+        });
+      }
+    };
+    window.addEventListener('storage', storageListener);
+  }
+};
+
+// 监听路由变化
+watch(() => route.path, async () => {
+  await clearChat();
+  await checkSceneChange();
+}, { immediate: true });
+
+// 组件挂载时
+onMounted(async () => {
+  let intervalId = null;
+  
+  try {
+    await clearChat();
+    
+    // 确保只在客户端环境中执行
+    if (process.client) {
+      await checkSceneChange();
+      setupStorageListener();
+      
+      // 立即检查场景
+      intervalId = setInterval(() => {
+        checkSceneChange().catch(error => {
+          console.error('Interval check error:', error);
+        });
+      }, 1000); // 每秒检查一次场景变化
+    }
+  } catch (error) {
+    console.error('组件挂载时出错:', error);
+  }
+  
+  // 组件卸载时清除定时器
+  onBeforeUnmount(() => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    if (storageListener && process.client) {
+      window.removeEventListener('storage', storageListener);
+    }
+  });
+});
 
 // 滚动到底部
 const scrollToBottom = async () => {
@@ -176,10 +297,45 @@ const sendMessage = async () => {
   userInput.value = "";
 
   try {
+    // 从localStorage获取当前场景信息
+    let systemPrompt = "你是一位经验丰富的医生，正在接受培训者的问诊训练。请根据培训者的问题，给出专业、耐心的回答。";
+    let sceneId = null;
+    let isNewScene = false;
+    
+    if (process.client) {
+      const sceneData = localStorage.getItem('currentScene');
+      if (sceneData) {
+        try {
+          const scene = JSON.parse(sceneData);
+          if (scene.scene_description_model) {
+            systemPrompt = scene.scene_description_model;
+          }
+          
+          // 检查场景是否变更
+          if (scene._id !== currentSceneId.value) {
+            isNewScene = true;
+            // 清空之前可能存在的对话历史
+            await axios.post("/api/bailian", { 
+              action: 'clearHistory',
+              conversationId: 'default'
+            });
+          }
+          
+          // 更新当前场景ID
+          sceneId = scene._id;
+          currentSceneId.value = scene._id;
+        } catch (error) {
+          console.error('解析场景数据失败:', error);
+        }
+      }
+    }
+
     console.log('Sending message to API:', userMessage);
     const aiResponse = await axios.post("/api/bailian", { 
         message: userMessage,
-        systemPrompt: "你是一位经验丰富的医生，正在接受培训者的问诊训练。请根据培训者的问题，给出专业、耐心的回答。"
+        systemPrompt: systemPrompt,
+        sceneId: sceneId,
+        newScene: isNewScene
     });
     const reply = aiResponse?.data?.response || "I didn't understand that.";
     const aiMessage = {
@@ -369,8 +525,8 @@ const evaluateConversation = async () => {
 /**
  * 重置训练，开始新一轮
  */
-const resetTraining = () => {
-  messages.value = [];
+const resetTraining = async () => {
+  await clearChat();
   trainingFinished.value = false;
   showEvaluation.value = false;
   evaluationRating.value = 0;

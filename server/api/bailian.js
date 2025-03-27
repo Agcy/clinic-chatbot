@@ -12,17 +12,34 @@ const conversationHistory = new Map();
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     
-    console.log('Received request body:', JSON.stringify(body, null, 2));
-
     // 验证请求体是否有效
     if (!body) {
         console.error('No body provided');
         return { error: 'No body provided' };
     }
 
+    // 处理清除特定对话历史的请求
+    if (body.action === 'clearHistory' && body.conversationId) {
+        conversationHistory.delete(body.conversationId);
+        return { success: true, message: '会话历史已清除' };
+    }
+
+    // 处理清除所有对话历史的请求（用于调试）
+    if (body.action === 'clearAllHistory') {
+        conversationHistory.clear();
+        return { success: true, message: '所有会话历史已清除' };
+    }
+
     let messages;
     const conversationId = body.conversationId || 'default';
+    const sceneId = body.sceneId; // 新增：场景ID
     
+    // 如果场景ID变更，清除该对话的历史
+    if (body.newScene && conversationId) {
+        conversationHistory.delete(conversationId);
+        console.log(`检测到场景切换，已清除会话 ${conversationId} 的历史记录`);
+    }
+
     // 处理新旧两种格式
     if (body.messages && Array.isArray(body.messages)) {
         // 新格式：直接使用 messages 数组

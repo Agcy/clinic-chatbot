@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import path from 'path';
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
@@ -8,7 +10,7 @@ export default defineNuxtConfig({
   },
   hooks: {
     'nitro:init': (nitro) => {
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = '/Users/jiahanchen/Desktop/final project/code/clinic-chatbot/assets/gmail-login-421617-f23ce8ba70b9.json';
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.cwd(), 'assets/gmail-login-421617-f23ce8ba70b9.json');
     }
   },
   modules: [

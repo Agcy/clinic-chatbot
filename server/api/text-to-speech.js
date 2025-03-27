@@ -2,8 +2,10 @@ import { defineEventHandler, readBody } from 'h3';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { writeFile } from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
+import path from 'path';
 
-process.env.GOOGLE_APPLICATION_CREDENTIALS = '/Users/jiahanchen/Desktop/final project/code/clinic-chatbot/assets/gmail-login-421617-f23ce8ba70b9.json';
+// 设置 Google 应用凭证环境变量
+process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.cwd(), 'assets/gmail-login-421617-f23ce8ba70b9.json');
 
 const client = new TextToSpeechClient();
 

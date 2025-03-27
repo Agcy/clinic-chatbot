@@ -17,7 +17,6 @@ export default defineEventHandler(async (event) => {
     // 连接MongoDB
     client = new MongoClient(process.env.MONGODB_URI || '');
     await client.connect();
-    console.log('MongoDB连接成功');
     
     // 获取数据库和集合
     const db = client.db('test');

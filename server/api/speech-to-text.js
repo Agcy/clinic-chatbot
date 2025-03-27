@@ -1,8 +1,9 @@
 import { SpeechClient } from '@google-cloud/speech';
 import { defineEventHandler, readBody } from 'h3';
+import path from 'path';
 
 // 设置 Google 应用凭证环境变量
-process.env.GOOGLE_APPLICATION_CREDENTIALS = '/Users/jiahanchen/Desktop/final project/code/clinic-chatbot/assets/gmail-login-421617-f23ce8ba70b9.json';
+process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.cwd(), 'assets/gmail-login-421617-f23ce8ba70b9.json');
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
