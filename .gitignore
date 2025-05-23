@@ -23,7 +23,6 @@ logs
 .env.*
 !.env.example
 
-public/model/surgeon_female/*
-public/model/surgeon_female.zip
+public/model/*
 
 output.mp3
