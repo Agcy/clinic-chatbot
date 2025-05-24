@@ -1,3 +1,4 @@
+import { defineNitroPlugin } from 'nitropack/runtime';
 import { connectDB } from '../utils/db';
 
 export default defineNitroPlugin(async () => {

@@ -15,9 +15,18 @@ export const connectDB = async () => {
     return;
   }
 
+  // 在尝试连接前打印 MONGODB_URI
+  const mongoURI = process.env.MONGODB_URI_NEW;
+  console.log(`尝试连接到 MongoDB: ${mongoURI}`);
+
+  if (!mongoURI) {
+    console.error('错误: MONGODB_URI 环境变量未设置。');
+    throw new Error('MONGODB_URI 环境变量未设置。');
+  }
+
   try {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,

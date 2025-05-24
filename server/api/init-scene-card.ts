@@ -6,7 +6,7 @@ import { MongoClient } from 'mongodb';
 export default defineEventHandler(async (event) => {
   try {
     // 连接MongoDB
-    const client = new MongoClient(process.env.MONGODB_URI || '');
+    const client = new MongoClient(process.env.MONGODB_URI_NEW || '');
     await client.connect();
     
     // 获取数据库和集合

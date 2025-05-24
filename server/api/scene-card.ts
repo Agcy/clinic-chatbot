@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     const sceneId = query.sceneId as string;
     
     // 连接MongoDB
-    client = new MongoClient(process.env.MONGODB_URI || '');
+    client = new MongoClient(process.env.MONGODB_URI_NEW || '');
     await client.connect();
     
     // 获取数据库和集合

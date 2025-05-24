@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>TTS 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea, input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        #audioPlayer {
+            width: 100%;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TTS (粤语) 测试工具</h1>
+        
+        <div class="input-group">
+            <label for="apiKey">API Key:</label>
+            <input type="text" id="apiKey" placeholder="输入你的 API Key (例如 sk-xxxxxxxx)">
+        </div>
+
+        <div class="input-group">
+            <label for="text">要转换的文本 (粤语):</label>
+            <textarea id="text" placeholder="输入要转换为语音的文本">當然是越快越好。接著你會覺得頭暈、頭痛，右面身體有抽筋的跡象, 再嚴重一點還有麻痺。現在我給你服藥，主要是幫你控制抽筋的情況。</textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="voice">选择声音:</label>
+            <select id="voice">
+                <option value="alloy">Alloy</option>
+                <option value="echo">Echo</option>
+                <option value="fable">Fable</option>
+                <option value="onyx">Onyx</option>
+                <option value="nova" selected>Nova (推荐粤语)</option>
+                <option value="shimmer">Shimmer</option>
+            </select>
+        </div>
+
+        <button onclick="generateSpeech()">生成语音</button>
+        
+        <div id="status" class="status"></div>
+        
+        <audio id="audioPlayer" controls style="display: none;">
+            您的浏览器不支持音频播放。
+        </audio>
+    </div>
+
+    <script>
+        async function generateSpeech() {
+            const apiKey = document.getElementById('apiKey').value;
+            const text = document.getElementById('text').value;
+            const voice = document.getElementById('voice').value;
+            const statusDiv = document.getElementById('status');
+            const audioPlayer = document.getElementById('audioPlayer');
+
+            if (!apiKey || !text) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '请填写 API Key 和要转换的文本。';
+                return;
+            }
+
+            statusDiv.className = 'status';
+            statusDiv.textContent = '正在生成语音...';
+            audioPlayer.style.display = 'none';
+            audioPlayer.src = ''; // 清除旧的音频
+
+            // API 请求参数
+            const requestBody = {
+                model: "tts-1", // OpenAI TTS 模型
+                input: text,
+                voice: voice,
+                response_format: "mp3", // 音频格式
+                // 根据 OpenAI TTS API 文档，tts-1 模型默认会根据输入文本自动判断语言，
+                // 并且没有直接的 language 参数用于指定方言如粤语。
+                // 粤语效果的好坏主要取决于选择的 voice 和输入文本本身是否为粤语。
+                // 'nova' voice 通常对中文（包括粤语）支持较好。
+                // 语速 speed 参数可以控制，范围 0.25 到 4.0，默认 1.0
+                speed: 1.0,
+                // 尝试添加 prompt 参数引导生成香港粤语
+                // 注意：标准 OpenAI tts-1 模型可能不直接使用此 prompt 控制方言，
+                // 效果取决于 API 服务商的具体实现。
+                instructions: "请用广东话粤语的语气"
+            };
+
+            var myHeaders = new Headers();
+            myHeaders.append("Authorization", `Bearer ${apiKey}`);
+            myHeaders.append("Content-Type", "application/json");
+
+            var requestOptions = {
+                method: 'POST',
+                headers: myHeaders,
+                body: JSON.stringify(requestBody),
+                redirect: 'follow'
+            };
+
+            // 请确保这里的 API 端点是正确的 OpenAI TTS 服务端点或你的代理端点
+            // 例如：'https://api.openai.com/v1/audio/speech' 或你提供的 'https://api.xeduapi.com/v1/audio/speech'
+            const apiEndpoint = 'https://api.xeduapi.com/v1/audio/speech'; // 你可以根据需要修改此处的端点
+
+            try {
+                const response = await fetch(apiEndpoint, requestOptions);
+
+                if (!response.ok) {
+                    // 尝试解析错误信息
+                    let errorData = { message: `HTTP error! status: ${response.status}` };
+                    try {
+                        errorData = await response.json(); // OpenAI 通常返回 JSON 错误
+                    } catch (e) {
+                        // 如果不是 JSON，使用文本
+                        errorData.message = await response.text() || errorData.message;
+                    }
+                    throw new Error(errorData.error ? errorData.error.message : errorData.message);
+                }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                audioPlayer.src = audioUrl;
+                audioPlayer.style.display = 'block';
+                
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '语音生成成功！';
+
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `错误：${error.message}`;
+                console.error('Fetch Error:', error);
+            }
+        }
+
+        // 从 localStorage 加载保存的 API Key (如果存在)
+        window.onload = function() {
+            const savedApiKey = localStorage.getItem('tts_api_key');
+            if (savedApiKey) {
+                document.getElementById('apiKey').value = savedApiKey;
+            }
+        }
+
+        // 保存 API Key 到 localStorage
+        document.getElementById('apiKey').addEventListener('input', function(e) {
+            localStorage.setItem('tts_api_key', e.target.value);
+        });
+    </script>
+</body>
+</html> 
