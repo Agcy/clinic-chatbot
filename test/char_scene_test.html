@@ -92,9 +92,9 @@
             const loader = new GLTFLoader();
 
             // 加载背景模型 (示例，你需要替换成你的模型路径)
-            loader.load('public/model/operation_room.fbx', function (gltf) {
+            loader.load('/public/model/operation_room.glb', function (gltf) {
                 backgroundModel = gltf.scene;
-                backgroundModel.position.set(0, 0, -5); // 调整背景位置
+                backgroundModel.position.set(0, -0.5, 0); // 调整背景位置
                 scene.add(backgroundModel);
             }, undefined, function (error) {
                 console.error('加载背景模型失败:', error);
@@ -111,7 +111,7 @@
 
             // 加载人物模型 (示例，你需要替换成你的模型路径)
             // 确保模型文件放在可以访问到的地方，例如项目的 public 文件夹
-            loader.load('/public/model/doctor_mix.glb', function (gltf) {
+            loader.load('/public/model/doctor.glb', function (gltf) {
                 characterModel = gltf.scene;
                 characterModel.position.set(0, -0.5, 0);
 

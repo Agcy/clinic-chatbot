@@ -1,6 +1,8 @@
-# Nuxt Minimal Starter
+# Clinicial Conversation Training System
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Install the following models in the `/public/model/` dictionary
+https://drive.google.com/drive/folders/1YiGlIL1F4L3PZnKZKSZywObuRObxiiQf?usp=sharing
+
 
 ## Setup
 

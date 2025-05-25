@@ -1,27 +1,43 @@
 <template>
   <div class="scene-page">
-    <ThreeDSceneLoader
-      :scene-url="sceneUrl"
-      :character-url="characterUrl"
+    <ThreeDSceneLoaderWithConfig
+      :config-id="selectedConfigId"
+      :enable-controls="enableControls"
     />
     
     <div class="controls">
-      <h2>场景控制器</h2>
+      <h2>3D场景控制器</h2>
+      
       <div class="control-group">
-        <label>选择场景：</label>
-        <select v-model="sceneUrl">
-          <option value="/model/operating-room.fbx">手术室场景</option>
+        <label>选择场景配置：</label>
+        <select v-model="selectedConfigId" @change="onConfigChange">
+          <option v-for="config in availableConfigs" :key="config.configId" :value="config.configId">
+            {{ config.name }}
+          </option>
         </select>
       </div>
       
       <div class="control-group">
-        <label>选择角色：</label>
-        <select v-model="characterUrl">
-          <option value="/model/doctor.glb">医生</option>
-          <option value="/model/patient.glb">病人</option>
-          <option value="/model/sasuke_fre_fire.glb">角色1</option>
-          <option value="/model/Technoblade.glb">角色2</option>
-        </select>
+        <label>
+          <input type="checkbox" v-model="enableControls" />
+          启用相机控制器
+        </label>
+      </div>
+      
+      <div class="control-group" v-if="currentConfig">
+        <h3>当前配置信息</h3>
+        <div class="config-info">
+          <p><strong>名称:</strong> {{ currentConfig.name }}</p>
+          <p><strong>描述:</strong> {{ currentConfig.description }}</p>
+          <p><strong>场景模型:</strong> {{ currentConfig.sceneModel.url }}</p>
+          <p><strong>角色模型:</strong> {{ currentConfig.characterModel.url }}</p>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <h3>动画测试</h3>
+        <button @click="testTalkAnimation(true)" class="test-btn">开始说话</button>
+        <button @click="testTalkAnimation(false)" class="test-btn">停止说话</button>
       </div>
       
       <div class="control-group">
@@ -31,66 +47,158 @@
           <span v-if="copied" class="copied-notification">已复制！</span>
         </div>
       </div>
+      
+      <div class="control-group">
+        <button @click="refreshConfigs" class="refresh-btn">刷新配置列表</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import ThreeDSceneLoader from '~/components/ThreeDSceneLoader.vue';
+import { ref, onMounted, computed } from 'vue';
+import ThreeDSceneLoaderWithConfig from '~/components/ThreeDSceneLoaderWithConfig.vue';
 import { useRoute, useRouter } from 'vue-router';
 
 // 获取路由对象
 const route = useRoute();
 const router = useRouter();
 
-/**
- * 场景和角色模型的URL
- * @description 默认使用医生模型作为角色，手术室作为场景
- */
-const sceneUrl = ref('/model/operating-room.fbx');
-const characterUrl = ref('/model/doctor.glb');
-
-// 分享链接
+// 响应式数据
+const selectedConfigId = ref('doctor-operating-room');
+const enableControls = ref(false);
+const availableConfigs = ref([]);
 const shareLink = ref('');
 const copied = ref(false);
 
-/**
- * 从URL参数中获取场景和角色URL
- */
-onMounted(() => {
-  // 检查URL参数
-  const urlScene = route.query.scene;
-  const urlCharacter = route.query.character;
-  
-  // 如果URL参数存在，使用URL参数
-  if (urlScene) {
-    sceneUrl.value = decodeURIComponent(urlScene);
-  }
-  
-  if (urlCharacter) {
-    characterUrl.value = decodeURIComponent(urlCharacter);
-  }
+// 计算当前配置
+const currentConfig = computed(() => {
+  return availableConfigs.value.find(config => config.configId === selectedConfigId.value);
 });
+
+/**
+ * 获取可用的配置列表
+ */
+const fetchAvailableConfigs = async () => {
+  try {
+    // 首先尝试从ScenePosition获取配置
+    try {
+      const configs = await $fetch('/api/scene-positions');
+      if (configs && configs.length > 0) {
+        availableConfigs.value = configs;
+        console.log('从ScenePosition获取到配置列表:', configs);
+        return;
+      }
+    } catch (scenePositionError) {
+      console.log('ScenePosition配置为空，尝试从Scene数据获取');
+    }
+    
+    // 如果ScenePosition为空，从现有Scene数据构建配置列表
+    const scenesResponse = await $fetch('/api/scenes');
+    if (scenesResponse.success && scenesResponse.scenes && scenesResponse.scenes.length > 0) {
+      const sceneConfigs = scenesResponse.scenes.map(scene => {
+        let configId = 'scene-' + scene.scene_id;
+        
+                 // 根据场景内容确定配置ID
+         const sceneText = ((scene.scene_title || '') + ' ' + (scene.scene_description_charactor || '') + ' ' + (scene.model_charactor || '')).toLowerCase();
+        if (sceneText.includes('医生') || sceneText.includes('doctor') || sceneText.includes('医师')) {
+          configId = 'doctor-' + scene.scene_id;
+        } else if (sceneText.includes('病人') || sceneText.includes('患者') || sceneText.includes('patient')) {
+          configId = 'patient-' + scene.scene_id;
+        }
+        
+        return {
+          configId: configId,
+          name: scene.scene_title || '未命名场景',
+          description: scene.scene_description_model || '',
+          sceneModel: {
+            url: scene.scene_url_3d || '/model/operation_room.glb'
+          },
+          characterModel: {
+            url: scene.charactor_url_3d || '/model/doctor.glb'
+          }
+        };
+      });
+      
+      availableConfigs.value = sceneConfigs;
+      console.log('从Scene数据构建的配置列表:', sceneConfigs);
+      return;
+    }
+    
+    // 如果都没有，使用默认配置
+    availableConfigs.value = [
+      {
+        configId: 'doctor-operating-room',
+        name: '医生-手术室场景',
+        description: '医生在手术室的3D场景配置',
+        sceneModel: { url: '/model/operation_room.glb' },
+        characterModel: { url: '/model/doctor.glb' }
+      }
+    ];
+    console.log('使用默认配置');
+    
+  } catch (error) {
+    console.error('获取配置列表失败:', error);
+    // 如果获取失败，使用默认配置
+    availableConfigs.value = [
+      {
+        configId: 'doctor-operating-room',
+        name: '医生-手术室场景',
+        description: '医生在手术室的3D场景配置',
+        sceneModel: { url: '/model/operation_room.glb' },
+        characterModel: { url: '/model/doctor.glb' }
+      }
+    ];
+  }
+};
+
+/**
+ * 从URL参数中获取配置
+ */
+const loadFromUrlParams = () => {
+  const urlConfigId = route.query.configId;
+  const urlControls = route.query.controls;
+  
+  if (urlConfigId) {
+    selectedConfigId.value = decodeURIComponent(urlConfigId);
+  }
+  
+  if (urlControls) {
+    enableControls.value = urlControls === 'true';
+  }
+};
+
+/**
+ * 配置变化处理
+ */
+const onConfigChange = () => {
+  // 更新URL参数
+  updateUrlParams();
+};
+
+/**
+ * 更新URL参数
+ */
+const updateUrlParams = () => {
+  const query = {
+    configId: encodeURIComponent(selectedConfigId.value),
+    controls: enableControls.value.toString()
+  };
+  
+  router.replace({ query });
+};
 
 /**
  * 生成分享链接
  */
 const generateShareLink = () => {
-  // 构建URL
   const baseUrl = window.location.origin + window.location.pathname;
   const queryParams = new URLSearchParams();
-  queryParams.set('scene', encodeURIComponent(sceneUrl.value));
-  queryParams.set('character', encodeURIComponent(characterUrl.value));
+  queryParams.set('configId', encodeURIComponent(selectedConfigId.value));
+  queryParams.set('controls', enableControls.value.toString());
   
-  // 设置分享链接
   shareLink.value = `${baseUrl}?${queryParams.toString()}`;
-  
-  // 更新浏览器URL，不刷新页面
-  router.replace({ query: { 
-    scene: encodeURIComponent(sceneUrl.value),
-    character: encodeURIComponent(characterUrl.value)
-  }});
+  updateUrlParams();
 };
 
 /**
@@ -104,6 +212,54 @@ const copyToClipboard = () => {
     }, 2000);
   });
 };
+
+/**
+ * 测试说话动画
+ */
+const testTalkAnimation = (play) => {
+  if (window.playTalkAnimation) {
+    window.playTalkAnimation(play);
+  } else {
+    console.warn('动画控制函数未准备好');
+  }
+};
+
+/**
+ * 刷新配置列表
+ */
+const refreshConfigs = async () => {
+  await fetchAvailableConfigs();
+};
+
+/**
+ * 初始化场景位置配置数据
+ */
+const initializeScenePositions = async () => {
+  try {
+    const response = await $fetch('/api/init-scene-positions', {
+      method: 'POST',
+      body: { clearExisting: false }
+    });
+    console.log('场景位置配置初始化结果:', response);
+    await fetchAvailableConfigs();
+  } catch (error) {
+    console.error('初始化场景位置配置失败:', error);
+  }
+};
+
+// 生命周期
+onMounted(async () => {
+  // 首先尝试初始化配置数据
+  await initializeScenePositions();
+  
+  // 从URL参数加载配置
+  loadFromUrlParams();
+  
+  // 确保选择的配置存在
+  if (!availableConfigs.value.find(config => config.configId === selectedConfigId.value)) {
+    selectedConfigId.value = availableConfigs.value[0]?.configId || 'doctor-operating-room';
+  }
+});
 </script>
 
 <style scoped>
@@ -118,17 +274,28 @@ const copyToClipboard = () => {
   position: absolute;
   top: 20px;
   right: 20px;
-  background-color: rgba(255, 255, 255, 0.8);
-  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   z-index: 10;
+  max-width: 350px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .controls h2 {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 18px;
+  color: #333;
+}
+
+.controls h3 {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
 }
 
 .control-group {
@@ -139,6 +306,7 @@ const copyToClipboard = () => {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
+  color: #333;
 }
 
 .control-group select {
@@ -146,6 +314,39 @@ const copyToClipboard = () => {
   padding: 8px;
   border-radius: 5px;
   border: 1px solid #ccc;
+  background-color: white;
+}
+
+.control-group input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.config-info {
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.config-info p {
+  margin: 5px 0;
+  word-break: break-all;
+}
+
+.test-btn {
+  background-color: #2196F3;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.test-btn:hover {
+  background-color: #1976D2;
 }
 
 .share-btn {
@@ -163,6 +364,21 @@ const copyToClipboard = () => {
   background-color: #45a049;
 }
 
+.refresh-btn {
+  background-color: #FF9800;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+}
+
+.refresh-btn:hover {
+  background-color: #F57C00;
+}
+
 .share-link {
   margin-top: 10px;
   position: relative;
@@ -174,6 +390,7 @@ const copyToClipboard = () => {
   border-radius: 5px;
   border: 1px solid #ccc;
   cursor: pointer;
+  font-size: 12px;
 }
 
 .copied-notification {
@@ -184,6 +401,25 @@ const copyToClipboard = () => {
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 12px;
+  font-size: 10px;
+}
+
+/* 滚动条样式 */
+.controls::-webkit-scrollbar {
+  width: 6px;
+}
+
+.controls::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.controls::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.controls::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style> 

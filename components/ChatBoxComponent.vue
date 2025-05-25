@@ -3,10 +3,10 @@
  */
 
 <template>
-  <div class="chat-box fixed inset-x-0 bottom-0 p-4 pb-10 flex justify-center">
-    <div class="w-[600px] rounded-2xl shadow-2xl overflow-visible bg-gradient-to-b from-white/90 to-white/80 backdrop-blur">
+  <div class="chat-box fixed right-0 top-0 bottom-0 p-4 flex items-center">
+    <div class="w-[400px] h-[80vh] rounded-2xl shadow-2xl overflow-visible bg-gradient-to-b from-black/20 to-black/30 backdrop-blur-sm border border-white/20">
       <!-- 消息容器 -->
-      <div class="messages-container h-[70vh] overflow-y-auto p-4 mb-2 rounded-t-2xl">
+              <div class="messages-container h-[60vh] overflow-y-auto p-4 mb-2 rounded-t-2xl">
         <transition-group name="fade" tag="div" class="space-y-4">
           <div
               v-for="(msg, index) in messages"
@@ -18,8 +18,8 @@
               ]"
           >
             <div
-              class="message-content px-6 py-4 rounded-2xl max-w-[85%]"
-              :class="msg.from === 'user' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'"
+              class="message-content px-4 py-3 rounded-xl max-w-[90%] text-sm"
+              :class="msg.from === 'user' ? 'bg-gradient-to-r from-blue-500/80 to-blue-600/80 text-white backdrop-blur-sm' : 'bg-gradient-to-r from-white/80 to-gray-100/80 text-gray-800 backdrop-blur-sm'"
             >
               {{ msg.text }}
             </div>
@@ -27,7 +27,7 @@
         </transition-group>
         
         <!-- 评估结果显示区域 -->
-        <div v-if="showEvaluation" class="evaluation-results bg-gradient-to-r from-yellow-50 to-orange-50 text-gray-800 rounded-2xl p-4 my-3 border border-yellow-200 shadow-lg">
+        <div v-if="showEvaluation" class="evaluation-results bg-gradient-to-r from-yellow-50/80 to-orange-50/80 text-gray-800 rounded-xl p-3 my-3 border border-yellow-200/50 shadow-lg backdrop-blur-sm">
           <h3 class="text-lg font-bold mb-3 text-yellow-700">訓練評估結果</h3>
           <div class="rating flex items-center mb-3">
             <span class="mr-2 font-medium">評分:</span>
@@ -58,7 +58,7 @@
                 v-model="userInput"
                 type="text"
                 placeholder="输入消息..."
-                class="w-full px-6 py-4 bg-white/90 border border-gray-200 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 outline-none"
+                class="w-full px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm"
                 :disabled="trainingFinished"
             />
           </div>
@@ -147,10 +147,9 @@ const currentSceneId = ref(null);
 
 let mediaRecorder;
 let audioChunks = [];
-let storageListener = null;
 
 // 清空聊天记录
-const clearChat = async () => {
+const clearChat = () => {
   console.log('清空聊天记录');
   messages.value = [];
   userInput.value = "";
@@ -167,104 +166,31 @@ const clearChat = async () => {
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
   }
-  
-  // 清除服务器端的对话历史
-  await clearServerHistory();
 };
 
-// 清除服务器端对话历史
-const clearServerHistory = async () => {
-  if (process.client) {
-    try {
-      // 清除默认对话
-      await axios.post("/api/bailian", { 
-        action: 'clearHistory',
-        conversationId: 'default'
-      });
-      console.log('服务器端对话历史已清除');
-    } catch (error) {
-      console.error('清除服务器端对话历史失败:', error);
-    }
-  }
-};
-
-// 检查场景是否改变
-const checkSceneChange = async () => {
+// 初始化当前场景ID
+const initCurrentScene = () => {
   try {
-    // 确保只在客户端环境中访问localStorage
     if (process.client) {
       const sceneData = localStorage.getItem('currentScene');
       if (sceneData) {
         const scene = JSON.parse(sceneData);
-        // 如果场景ID改变，则清空聊天
-        if (scene._id !== currentSceneId.value) {
-          currentSceneId.value = scene._id;
-          await clearChat();
-        }
-      } else {
-        // 如果没有场景数据，也清空聊天
-        currentSceneId.value = null;
-        await clearChat();
+        currentSceneId.value = scene._id;
       }
     }
   } catch (error) {
-    console.error('检查场景变化时出错:', error);
+    console.error('初始化场景时出错:', error);
   }
 };
-
-// 监听localStorage变化
-const setupStorageListener = () => {
-  // 确保只在客户端环境中设置事件监听
-  if (process.client) {
-    storageListener = (event) => {
-      if (event.key === 'currentScene') {
-        checkSceneChange().catch(error => {
-          console.error('Storage listener error:', error);
-        });
-      }
-    };
-    window.addEventListener('storage', storageListener);
-  }
-};
-
-// 监听路由变化
-watch(() => route.path, async () => {
-  await clearChat();
-  await checkSceneChange();
-}, { immediate: true });
 
 // 组件挂载时
-onMounted(async () => {
-  let intervalId = null;
-  
+onMounted(() => {
   try {
-    await clearChat();
-    
-    // 确保只在客户端环境中执行
-    if (process.client) {
-      await checkSceneChange();
-      setupStorageListener();
-      
-      // 立即检查场景
-      intervalId = setInterval(() => {
-        checkSceneChange().catch(error => {
-          console.error('Interval check error:', error);
-        });
-      }, 1000); // 每秒检查一次场景变化
-    }
+    // 初始化当前场景ID
+    initCurrentScene();
   } catch (error) {
     console.error('组件挂载时出错:', error);
   }
-  
-  // 组件卸载时清除定时器
-  onBeforeUnmount(() => {
-    if (intervalId) {
-      clearInterval(intervalId);
-    }
-    if (storageListener && process.client) {
-      window.removeEventListener('storage', storageListener);
-    }
-  });
 });
 
 // 滚动到底部
@@ -314,16 +240,11 @@ const sendMessage = async () => {
           // 检查场景是否变更
           if (scene._id !== currentSceneId.value) {
             isNewScene = true;
-            // 清空之前可能存在的对话历史
-            await axios.post("/api/bailian", { 
-              action: 'clearHistory',
-              conversationId: 'default'
-            });
+            // 更新当前场景ID
+            currentSceneId.value = scene._id;
           }
           
-          // 更新当前场景ID
           sceneId = scene._id;
-          currentSceneId.value = scene._id;
         } catch (error) {
           console.error('解析场景数据失败:', error);
         }
@@ -525,8 +446,8 @@ const evaluateConversation = async () => {
 /**
  * 重置训练，开始新一轮
  */
-const resetTraining = async () => {
-  await clearChat();
+const resetTraining = () => {
+  clearChat();
   trainingFinished.value = false;
   showEvaluation.value = false;
   evaluationRating.value = 0;
@@ -542,19 +463,29 @@ const goToHome = () => {
 
 <style scoped>
 .chat-box {
-  z-index: 2;
-  padding-bottom: 4rem;
-  margin-bottom: 1.5rem;
+  z-index: 10;
+  pointer-events: none; /* 让背景可以点击 */
+}
+
+.chat-box > div {
+  pointer-events: auto; /* 恢复聊天框的点击事件 */
 }
 
 /* 添加响应式样式 */
 @media (max-width: 768px) {
   .chat-box {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    left: 0;
     padding: 0.5rem;
+    align-items: flex-end;
   }
   
   .chat-box > div {
     width: 100%;
+    height: 60vh;
   }
 }
 

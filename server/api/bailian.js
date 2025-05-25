@@ -17,8 +17,13 @@ export default defineEventHandler(async (event) => {
 
     // console.log('Received request with body:', body);
 
-    // 验证请求体中的消息是否有效
-    if (!body || typeof body.message !== 'string' || body.message.trim() === '') {
+    // 验证请求体中的消息是否有效（除非是清除历史的特殊请求）
+    if (!body || (typeof body.message !== 'string' || body.message.trim() === '')) {
+        // 如果是清除历史的请求，允许通过
+        if (body && body.action === 'clearHistory') {
+            console.log('清除聊天历史请求');
+            return { success: true, message: '聊天历史已清除' };
+        }
         console.error('Invalid message provided');
         return { error: 'Invalid message provided' };
     }

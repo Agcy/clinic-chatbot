@@ -5,7 +5,12 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
 
     // 验证请求体中的消息是否有效
-    if (!body || typeof body.message!== 'string' || body.message.trim() === '') {
+    if (!body || typeof body.message !== 'string' || body.message.trim() === '') {
+        // 如果是清除历史的请求，允许通过
+        if (body && body.action === 'clearHistory') {
+            console.log('清除聊天历史请求');
+            return { success: true, message: '聊天历史已清除' };
+        }
         return { error: 'Invalid message provided' };
     }
 

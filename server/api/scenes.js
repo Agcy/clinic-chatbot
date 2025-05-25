@@ -2,18 +2,17 @@
  * @fileoverview 场景列表API
  */
 
-import { defineEventHandler, readBody } from 'h3';
-import { Scene } from '../models/scene';
-import { connectDB, getConnectionStatus } from '../utils/db';
+import { Scene } from '../models/scene.js';
+import { connectDB } from '../config/db.js';
 
 export default defineEventHandler(async (event) => {
+    const method = getMethod(event);
+    
     try {
-        // 确保数据库已连接
-        if (!getConnectionStatus()) {
-            await connectDB();
-        }
+        // 连接数据库
+        await connectDB();
 
-        if (event.method === 'GET') {
+        if (method === 'GET') {
             // 获取所有场景列表
             const scenes = await Scene.find({});
 
@@ -21,7 +20,7 @@ export default defineEventHandler(async (event) => {
                 success: true,
                 scenes
             };
-        } else if (event.method === 'POST') {
+        } else if (method === 'POST') {
             // 获取特定场景的详细信息
             const body = await readBody(event);
             const { scene_id } = body;
