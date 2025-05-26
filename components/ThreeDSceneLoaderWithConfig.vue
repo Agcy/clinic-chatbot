@@ -47,107 +47,67 @@ let sceneConfig = null;
  */
 const fetchSceneConfig = async () => {
   try {
-    // 首先尝试从新的ScenePosition配置获取
-    try {
-      const response = await $fetch(`/api/scene-positions?configId=${props.configId}`);
-      sceneConfig = response;
-      console.log('从ScenePosition获取到场景配置:', sceneConfig);
-      return;
-    } catch (scenePositionError) {
-      console.log('ScenePosition配置未找到，尝试从Scene数据获取:', scenePositionError.message);
-    }
+    // 优先从 ScenePosition 数据表获取完整配置
+    const response = await $fetch(`/api/scene-positions?configId=${props.configId}`);
+    sceneConfig = response;
+    console.log('从ScenePosition获取到场景配置:', sceneConfig);
+    return;
+  } catch (scenePositionError) {
+    console.log('ScenePosition配置未找到，configId:', props.configId, '错误:', scenePositionError.message);
     
-    // 如果ScenePosition配置不存在，尝试从现有Scene数据获取
-    const scenesResponse = await $fetch('/api/scenes');
-    if (scenesResponse.success && scenesResponse.scenes && scenesResponse.scenes.length > 0) {
-      // 查找匹配的场景
-      let matchedScene = null;
-      
-             // 根据configId查找对应的场景
-       if (props.configId.includes('doctor')) {
-         matchedScene = scenesResponse.scenes.find(scene => 
-           (scene.scene_title || '').toLowerCase().includes('医生') || 
-           (scene.model_charactor || '').toLowerCase().includes('医生') ||
-           (scene.scene_title || '').toLowerCase().includes('doctor')
-         );
-       } else if (props.configId.includes('patient')) {
-         matchedScene = scenesResponse.scenes.find(scene => 
-           (scene.scene_title || '').toLowerCase().includes('病人') || 
-           (scene.model_charactor || '').toLowerCase().includes('病人') ||
-           (scene.scene_title || '').toLowerCase().includes('patient')
-         );
-       }
-      
-      // 如果没找到匹配的，使用第一个场景
-      if (!matchedScene && scenesResponse.scenes.length > 0) {
-        matchedScene = scenesResponse.scenes[0];
+    // 如果找不到 ScenePosition 配置，提供一个最基本的默认配置
+    sceneConfig = {
+      configId: props.configId,
+      name: '默认场景',
+      description: '基础3D场景配置',
+      sceneModel: {
+        url: '/model/operation_room.glb',
+        position: { x: 0, y: -0.5, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+      },
+      characterModel: {
+        url: '/model/doctor.glb',
+        position: { x: 0, y: -0.5, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+      },
+      camera: {
+        position: { x: 0, y: 0.7, z: 2 },
+        lookAt: { x: 0, y: 0.7, z: 2 },
+        fov: 75,
+        near: 0.1,
+        far: 1000
+      },
+      lighting: {
+        hemisphereLight: {
+          skyColor: '#ffffff',
+          groundColor: '#8d8d8d',
+          intensity: 6.0,
+          position: { x: 0, y: 10, z: 0 }
+        },
+        directionalLight: {
+          color: '#ffffff',
+          intensity: 3.0,
+          position: { x: 5, y: 5, z: 2 },
+          castShadow: true
+        },
+        ambientLight: {
+          color: '#ffffff',
+          intensity: 5.0
+        }
+      },
+      background: {
+        type: 'color',
+        value: '#87CEEB'
+      },
+      renderer: {
+        toneMappingExposure: 0.4,
+        toneMapping: 'ACESFilmicToneMapping'
       }
-      
-      if (matchedScene) {
-        // 构建兼容的配置对象
-        sceneConfig = {
-          configId: props.configId,
-          name: matchedScene.scene_title || '默认场景',
-          description: matchedScene.scene_description_model || '',
-          sceneModel: {
-            url: matchedScene.scene_url_3d || '/model/operation_room.glb',
-            position: { x: 0, y: -0.5, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 }
-          },
-          characterModel: {
-            url: matchedScene.charactor_url_3d || '/model/doctor.glb',
-            position: { x: 0, y: -0.5, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 }
-          },
-          camera: {
-            position: { x: 0, y: 0.7, z: 2 },
-            lookAt: { x: 0, y: 0.7, z: 2 },
-            fov: 75,
-            near: 0.1,
-            far: 1000
-          },
-          lighting: {
-            hemisphereLight: {
-              skyColor: '#ffffff',
-              groundColor: '#8d8d8d',
-              intensity: 6.0,
-              position: { x: 0, y: 10, z: 0 }
-            },
-            directionalLight: {
-              color: '#ffffff',
-              intensity: 3.0,
-              position: { x: 5, y: 5, z: 2 },
-              castShadow: true
-            },
-            ambientLight: {
-              color: '#ffffff',
-              intensity: 5.0
-            }
-          },
-          background: {
-            type: 'color',
-            value: '#87CEEB'
-          },
-          renderer: {
-            toneMappingExposure: 0.4,
-            toneMapping: 'ACESFilmicToneMapping'
-          }
-        };
-        
-        console.log('从Scene数据构建的配置:', sceneConfig);
-        return;
-      }
-    }
+    };
     
-    // 如果都没有找到，抛出错误
-    throw new Error('未找到场景配置数据');
-    
-  } catch (err) {
-    console.error('获取场景配置失败:', err);
-    error.value = '获取场景配置失败: ' + err.message;
-    throw err;
+    console.log('使用默认配置:', sceneConfig);
   }
 };
 

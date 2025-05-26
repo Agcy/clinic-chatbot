@@ -38,8 +38,11 @@ const sceneSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  scene_url_3d: String,
-  charactor_url_3d: String
+  config_id: {
+    type: String,
+    required: false
+  }
 });
 
-export const Scene = mongoose.model('Scene', sceneSchema); 
+// export const Scene = mongoose.model('Scene', sceneSchema);
+export const Scene = mongoose.models.Scene || mongoose.model('Scene', sceneSchema); 

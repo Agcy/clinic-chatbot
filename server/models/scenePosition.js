@@ -122,4 +122,5 @@ scenePositionSchema.pre('save', function(next) {
   next();
 });
 
-export const ScenePosition = mongoose.model('ScenePosition', scenePositionSchema); 
+// export const ScenePosition = mongoose.model('ScenePosition', scenePositionSchema);
+export const ScenePosition = mongoose.models.ScenePosition || mongoose.model('ScenePosition', scenePositionSchema); 

@@ -7,17 +7,17 @@
       <!-- 管理操作 -->
       <div class="flex justify-end mb-4 gap-2">
         <button 
+          @click="isDeleteMode = !isDeleteMode" 
+          class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
+          :class="{ 'bg-gray-500 hover:bg-gray-700': isDeleteMode }"
+        >
+          {{ isDeleteMode ? '完成' : '刪除場景' }}
+        </button>
+        <button 
           @click="showDebug = !showDebug" 
           class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm"
         >
           {{ showDebug ? '關閉調試' : '開啟調試' }}
-        </button>
-        <button 
-          @click="initScenes" 
-          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
-          :disabled="isInitializing"
-        >
-          {{ isInitializing ? '初始化中...' : '重新初始化場景' }}
         </button>
       </div>
       
@@ -43,8 +43,17 @@
           v-for="scene in scenes" 
           :key="scene.scene_id"
           class="scene-card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-transform hover:scale-105 relative"
-          @click="selectScene(scene.scene_id)"
+          @click="isDeleteMode ? null : selectScene(scene.scene_id)"
         >
+          <!-- 删除按钮 -->
+          <div 
+            v-if="isDeleteMode"
+            @click.stop="confirmDeleteScene(scene)"
+            class="absolute left-2 top-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white cursor-pointer z-30 animate-bounce-once"
+          >
+            ❌
+          </div>
+          
           <!-- 场景图片 -->
           <div class="h-48 bg-gray-200">
             <img 
@@ -63,7 +72,6 @@
               <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                 {{ scene.scene_type }}
               </span>
-              <!-- 查看角色按钮 -->
               <button 
                 @click.stop="viewRoleDetails(scene)" 
                 class="text-xs text-blue-600 hover:text-blue-800 underline"
@@ -79,7 +87,7 @@
           </div>
           
           <!-- 角色描述悬浮提示 -->
-          <div class="scene-tooltip absolute inset-0 bg-white bg-opacity-98 p-4 overflow-auto flex flex-col z-20 shadow-lg">
+          <div v-if="!isDeleteMode" class="scene-tooltip absolute inset-0 bg-white bg-opacity-98 p-4 overflow-auto flex flex-col z-20 shadow-lg">
             <h4 class="text-lg font-semibold text-blue-600 mb-2 sticky top-0 bg-white py-1">您將扮演: {{ scene.trainee_character || '醫生' }}</h4>
             <div class="text-sm text-gray-700 flex-grow overflow-auto">
               <p v-if="scene.scene_description_charactor && scene.scene_description_charactor.trim()">
@@ -272,6 +280,46 @@
         </div>
       </div>
     </div>
+    
+    <!-- 删除确认弹窗 -->
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg w-full max-w-md">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">確認刪除</h2>
+            <button @click="showDeleteModal = false" class="text-gray-500 hover:text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div v-if="sceneToDelete" class="mb-6">
+            <p class="text-gray-700 mb-4">您確定要刪除以下場景嗎？</p>
+            <div class="bg-gray-100 p-4 rounded">
+              <p class="font-semibold">{{ sceneToDelete.scene_title }}</p>
+              <p class="text-sm text-gray-600">{{ sceneToDelete.scene_type }}</p>
+            </div>
+            <p class="text-red-600 text-sm mt-4">此操作無法撤銷</p>
+          </div>
+          
+          <div class="flex justify-end gap-4">
+            <button
+              @click="showDeleteModal = false"
+              class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            >
+              取消
+            </button>
+            <button
+              @click="deleteScene"
+              class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
+            >
+              確認刪除
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -287,8 +335,10 @@ const isGenerating = ref(false);
 const hoveredScene = ref(null);
 const showRoleModal = ref(false);
 const selectedScene = ref(null);
-const isInitializing = ref(false);
-const showDebug = ref(false); // 调试模式
+const showDebug = ref(false);
+const showDeleteModal = ref(false);
+const sceneToDelete = ref(null);
+const isDeleteMode = ref(false);
 
 // 自定义场景选项
 const customSceneOptions = {
@@ -496,33 +546,42 @@ const viewRoleDetails = (scene) => {
   showRoleModal.value = true;
 };
 
-// 初始化场景数据
-const initScenes = async () => {
-  if (isInitializing.value) return;
-  
-  isInitializing.value = true;
+// 确认删除场景
+const confirmDeleteScene = (scene) => {
+  sceneToDelete.value = scene;
+  showDeleteModal.value = true;
+};
+
+// 删除场景
+const deleteScene = async () => {
+  if (!sceneToDelete.value) return;
   
   try {
-    const response = await axios.get('/api/init-scenes');
-    console.log('初始化场景结果:', response.data);
-    await fetchScenes();
-    alert('场景初始化成功!');
+    const response = await axios.delete('/api/scenes', {
+      data: { scene_id: sceneToDelete.value.scene_id }
+    });
+    
+    if (response.data.success) {
+      // 从列表中移除场景
+      scenes.value = scenes.value.filter(s => s.scene_id !== sceneToDelete.value.scene_id);
+      showDeleteModal.value = false;
+      sceneToDelete.value = null;
+    } else {
+      throw new Error(response.data.error || '删除场景失败');
+    }
   } catch (error) {
-    console.error('初始化场景数据失败:', error);
-    alert('初始化场景失败: ' + error.message);
-  } finally {
-    isInitializing.value = false;
+    console.error('删除场景失败:', error);
+    alert('删除场景失败: ' + error.message);
   }
 };
 
 // 页面加载时初始化场景数据
 onMounted(async () => {
-  // 初始化场景数据
+  // 初始化场景数据 - 不再需要调用 /api/init-scenes
   try {
-    await axios.get('/api/init-scenes');
-    await fetchScenes();
+    await fetchScenes(); // 保留 fetchScenes 以加载列表
   } catch (error) {
-    console.error('初始化场景数据失败:', error);
+    console.error('获取场景列表失败:', error); // 更新错误消息
   }
 });
 </script>
@@ -563,6 +622,19 @@ onMounted(async () => {
   }
   to {
     opacity: 1;
+  }
+}
+
+.animate-bounce-once {
+  animation: bounce 0.5s;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 </style>

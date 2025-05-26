@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   logLevel: 'info',
   runtimeConfig: {
     googleApiKey: process.env.GOOGLE_API_KEY, // 让 Nuxt 访问 API Key
-    mongodbUri: process.env.MONGODB_URI_NEW || 'mongodb://root:cjh13862968098@129.204.5.155:27017/ccts?authSource=admin', // MongoDB连接字符串
+    mongodbUri: process.env.MONGODB_URI_NEW
   },
   hooks: {
     'nitro:init': (nitro: Nitro) => {

@@ -97,25 +97,57 @@ const fetchAvailableConfigs = async () => {
     const scenesResponse = await $fetch('/api/scenes');
     if (scenesResponse.success && scenesResponse.scenes && scenesResponse.scenes.length > 0) {
       const sceneConfigs = scenesResponse.scenes.map(scene => {
-        let configId = 'scene-' + scene.scene_id;
-        
-                 // 根据场景内容确定配置ID
-         const sceneText = ((scene.scene_title || '') + ' ' + (scene.scene_description_charactor || '') + ' ' + (scene.model_charactor || '')).toLowerCase();
-        if (sceneText.includes('医生') || sceneText.includes('doctor') || sceneText.includes('医师')) {
-          configId = 'doctor-' + scene.scene_id;
-        } else if (sceneText.includes('病人') || sceneText.includes('患者') || sceneText.includes('patient')) {
-          configId = 'patient-' + scene.scene_id;
-        }
+        // 优先使用场景中定义的 config_id
+        const configId = scene.config_id || ('scene-' + scene.scene_id);
         
         return {
           configId: configId,
           name: scene.scene_title || '未命名场景',
           description: scene.scene_description_model || '',
           sceneModel: {
-            url: scene.scene_url_3d || '/model/operation_room.glb'
+            url: '/model/operation_room.glb',
+            position: { x: 0, y: -0.5, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 }
           },
           characterModel: {
-            url: scene.charactor_url_3d || '/model/doctor.glb'
+            url: '/model/doctor.glb',
+            position: { x: 0, y: -0.5, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 }
+          },
+          camera: {
+            position: { x: 0, y: 0.7, z: 2 },
+            lookAt: { x: 0, y: 0.7, z: 2 },
+            fov: 75,
+            near: 0.1,
+            far: 1000
+          },
+          lighting: {
+            hemisphereLight: {
+              skyColor: '#ffffff',
+              groundColor: '#8d8d8d',
+              intensity: 6.0,
+              position: { x: 0, y: 10, z: 0 }
+            },
+            directionalLight: {
+              color: '#ffffff',
+              intensity: 3.0,
+              position: { x: 5, y: 5, z: 2 },
+              castShadow: true
+            },
+            ambientLight: {
+              color: '#ffffff',
+              intensity: 5.0
+            }
+          },
+          background: {
+            type: 'color',
+            value: '#87CEEB'
+          },
+          renderer: {
+            toneMappingExposure: 0.4,
+            toneMapping: 'ACESFilmicToneMapping'
           }
         };
       });
@@ -131,8 +163,51 @@ const fetchAvailableConfigs = async () => {
         configId: 'doctor-operating-room',
         name: '医生-手术室场景',
         description: '医生在手术室的3D场景配置',
-        sceneModel: { url: '/model/operation_room.glb' },
-        characterModel: { url: '/model/doctor.glb' }
+        sceneModel: { 
+          url: '/model/operation_room.glb',
+          position: { x: 0, y: -0.5, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        },
+        characterModel: { 
+          url: '/model/doctor.glb',
+          position: { x: 0, y: -0.5, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        },
+        camera: {
+          position: { x: 0, y: 0.7, z: 2 },
+          lookAt: { x: 0, y: 0.7, z: 2 },
+          fov: 75,
+          near: 0.1,
+          far: 1000
+        },
+        lighting: {
+          hemisphereLight: {
+            skyColor: '#ffffff',
+            groundColor: '#8d8d8d',
+            intensity: 6.0,
+            position: { x: 0, y: 10, z: 0 }
+          },
+          directionalLight: {
+            color: '#ffffff',
+            intensity: 3.0,
+            position: { x: 5, y: 5, z: 2 },
+            castShadow: true
+          },
+          ambientLight: {
+            color: '#ffffff',
+            intensity: 5.0
+          }
+        },
+        background: {
+          type: 'color',
+          value: '#87CEEB'
+        },
+        renderer: {
+          toneMappingExposure: 0.4,
+          toneMapping: 'ACESFilmicToneMapping'
+        }
       }
     ];
     console.log('使用默认配置');
@@ -145,8 +220,51 @@ const fetchAvailableConfigs = async () => {
         configId: 'doctor-operating-room',
         name: '医生-手术室场景',
         description: '医生在手术室的3D场景配置',
-        sceneModel: { url: '/model/operation_room.glb' },
-        characterModel: { url: '/model/doctor.glb' }
+        sceneModel: { 
+          url: '/model/operation_room.glb',
+          position: { x: 0, y: -0.5, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        },
+        characterModel: { 
+          url: '/model/doctor.glb',
+          position: { x: 0, y: -0.5, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        },
+        camera: {
+          position: { x: 0, y: 0.7, z: 2 },
+          lookAt: { x: 0, y: 0.7, z: 2 },
+          fov: 75,
+          near: 0.1,
+          far: 1000
+        },
+        lighting: {
+          hemisphereLight: {
+            skyColor: '#ffffff',
+            groundColor: '#8d8d8d',
+            intensity: 6.0,
+            position: { x: 0, y: 10, z: 0 }
+          },
+          directionalLight: {
+            color: '#ffffff',
+            intensity: 3.0,
+            position: { x: 5, y: 5, z: 2 },
+            castShadow: true
+          },
+          ambientLight: {
+            color: '#ffffff',
+            intensity: 5.0
+          }
+        },
+        background: {
+          type: 'color',
+          value: '#87CEEB'
+        },
+        renderer: {
+          toneMappingExposure: 0.4,
+          toneMapping: 'ACESFilmicToneMapping'
+        }
       }
     ];
   }
