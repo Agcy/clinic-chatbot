@@ -5,19 +5,51 @@
     "description": "医生在手术室的3D场景配置",
     "sceneModel": {
       "url": "/model/operation_room.glb",
-      "position": { "x": 0, "y": -0.5, "z": 0 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 1, "y": 1, "z": 1 }
+      "position": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     },
     "characterModel": {
       "url": "/model/doctor.glb",
-      "position": { "x": 0, "y": -0.5, "z": 0 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 1, "y": 1, "z": 1 }
+      "position": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     },
     "camera": {
-      "position": { "x": 0, "y": 0.7, "z": 2 },
-      "lookAt": { "x": 0, "y": 0.7, "z": 0 },
+      "position": {
+        "x": 0,
+        "y": 0.7,
+        "z": 2
+      },
+      "lookAt": {
+        "x": 0,
+        "y": 0.7,
+        "z": 0
+      },
       "fov": 75,
       "near": 0.1,
       "far": 1000
@@ -26,18 +58,26 @@
       "hemisphereLight": {
         "skyColor": "#ffffff",
         "groundColor": "#8d8d8d",
-        "intensity": 6.0,
-        "position": { "x": 0, "y": 10, "z": 0 }
+        "intensity": 6,
+        "position": {
+          "x": 0,
+          "y": 10,
+          "z": 0
+        }
       },
       "directionalLight": {
         "color": "#ffffff",
-        "intensity": 3.0,
-        "position": { "x": 5, "y": 5, "z": 2 },
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 5,
+          "z": 2
+        },
         "castShadow": true
       },
       "ambientLight": {
         "color": "#ffffff",
-        "intensity": 5.0
+        "intensity": 5
       }
     },
     "background": {
@@ -55,19 +95,51 @@
     "description": "病人在手术室的3D场景配置",
     "sceneModel": {
       "url": "/model/operation_room.glb",
-      "position": { "x": 0, "y": -0.5, "z": 0 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 1, "y": 1, "z": 1 }
+      "position": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     },
     "characterModel": {
       "url": "/model/patient.glb",
-      "position": { "x": 0, "y": -0.5, "z": 0 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 1, "y": 1, "z": 1 }
+      "position": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     },
     "camera": {
-      "position": { "x": 0, "y": 0.7, "z": 2 },
-      "lookAt": { "x": 0, "y": 0.7, "z": 0 },
+      "position": {
+        "x": 0,
+        "y": 0.7,
+        "z": 2
+      },
+      "lookAt": {
+        "x": 0,
+        "y": 0.7,
+        "z": 0
+      },
       "fov": 75,
       "near": 0.1,
       "far": 1000
@@ -76,18 +148,26 @@
       "hemisphereLight": {
         "skyColor": "#ffffff",
         "groundColor": "#8d8d8d",
-        "intensity": 6.0,
-        "position": { "x": 0, "y": 10, "z": 0 }
+        "intensity": 6,
+        "position": {
+          "x": 0,
+          "y": 10,
+          "z": 0
+        }
       },
       "directionalLight": {
         "color": "#ffffff",
-        "intensity": 3.0,
-        "position": { "x": 5, "y": 5, "z": 2 },
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 5,
+          "z": 2
+        },
         "castShadow": true
       },
       "ambientLight": {
         "color": "#ffffff",
-        "intensity": 5.0
+        "intensity": 5
       }
     },
     "background": {
@@ -98,5 +178,95 @@
       "toneMappingExposure": 0.4,
       "toneMapping": "ACESFilmicToneMapping"
     }
+  },
+  {
+    "configId": "patient-operating-room-2",
+    "name": "病人-手术室场景2",
+    "description": "病人在手术室的3D场景配置",
+    "sceneModel": {
+      "url": "/public/model/operation_room.glb",
+      "position": {
+        "x": -4,
+        "y": -0.5,
+        "z": 1.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": -3.4557519189487724,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "characterModel": {
+      "url": "/public/model/patient.glb",
+      "position": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "camera": {
+      "position": {
+        "x": 0,
+        "y": 0.6999999999999996,
+        "z": 2
+      },
+      "lookAt": {
+        "x": 0,
+        "y": 0.7,
+        "z": 0
+      },
+      "fov": 75,
+      "near": 0.1,
+      "far": 1000
+    },
+    "lighting": {
+      "hemisphereLight": {
+        "skyColor": "#ffffff",
+        "groundColor": "#8d8d8d",
+        "intensity": 6,
+        "position": {
+          "x": 0,
+          "y": 10,
+          "z": 0
+        }
+      },
+      "directionalLight": {
+        "color": "#ffffff",
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 5,
+          "z": 2
+        },
+        "castShadow": true
+      },
+      "ambientLight": {
+        "color": "#ffffff",
+        "intensity": 5
+      }
+    },
+    "background": {
+      "type": "color",
+      "value": "#87ceeb"
+    },
+    "renderer": {
+      "toneMappingExposure": 0.4,
+      "toneMapping": "ACESFilmicToneMapping"
+    }
   }
-] 
+]
