@@ -1,5 +1,5 @@
 /**
- * @fileoverview 聊天框组件
+ * @fileoverview 聊天框组件 - 使用扣子(Coze)工作流API
  */
 
 <template>
@@ -149,8 +149,19 @@ let mediaRecorder;
 let audioChunks = [];
 
 // 清空聊天记录
-const clearChat = () => {
+const clearChat = async () => {
   console.log('清空聊天记录');
+  
+  try {
+    // 调用API清除conversation_id
+    await axios.post("/api/coze-conversation", {
+      action: 'clearHistory',
+      userId: 'default_user'
+    });
+  } catch (error) {
+    console.error('清除对话历史失败:', error);
+  }
+  
   messages.value = [];
   userInput.value = "";
   isRecording.value = false;
@@ -181,6 +192,22 @@ const initCurrentScene = () => {
   } catch (error) {
     console.error('初始化场景时出错:', error);
   }
+};
+
+// 获取预加载的角色信息
+const getCurrentSceneCharacter = () => {
+  // 直接从全局变量获取预加载的角色信息
+  if (window.currentSceneCharacter) {
+    console.log(`使用预加载的角色信息: ${window.currentSceneCharacter.name} (${window.currentSceneCharacter.voice})`);
+    return window.currentSceneCharacter;
+  }
+  
+  // 如果没有预加载信息，返回默认值
+  console.log('未找到预加载的角色信息，使用默认角色: patient');
+  return {
+    name: 'patient',
+    voice: 'zh-HK-HiuGaaiNeural'
+  };
 };
 
 // 组件挂载时
@@ -252,12 +279,18 @@ const sendMessage = async () => {
     }
 
     console.log('Sending message to API:', userMessage);
-    const aiResponse = await axios.post("/api/bailian", { 
+    const aiResponse = await axios.post("/api/coze-conversation", { 
         message: userMessage,
         systemPrompt: systemPrompt,
-        sceneId: sceneId,
-        newScene: isNewScene
+        userId: 'default_user', // 或者使用实际的用户ID
+        scenarioId: sceneId,
+        shouldSave: false // 训练过程中不保存，完成后再保存
     });
+    
+    if (aiResponse?.data?.error) {
+      throw new Error(aiResponse.data.error);
+    }
+    
     const reply = aiResponse?.data?.response || "I didn't understand that.";
     const aiMessage = {
       id: Date.now(),
@@ -266,15 +299,73 @@ const sendMessage = async () => {
     };
     messages.value.push(aiMessage);
 
-    // Convert AI response to speech
-    const speechResponse = await axios.post("/api/text-to-speech", { text: reply });
-    const audioContent = speechResponse.data.audioContent;
+    // 转换AI回复为语音并播放，在语音开始播放时控制角色动画
+    try {
+      // 获取预加载的角色信息（无需异步调用）
+      const currentCharacter = getCurrentSceneCharacter();
+      const characterName = currentCharacter.name;
 
-    // Play the audio
-    const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-    audio.play();
+      console.log('开始生成语音...');
+      // 调用新的Edge TTS API，传入角色名称
+      const speechResponse = await axios.post("/api/text-to-speech", { 
+        text: reply,
+        characterName: characterName
+      });
+      
+      if (!speechResponse.data.success) {
+        throw new Error(speechResponse.data.error || '语音生成失败');
+      }
+
+      const audioContent = speechResponse.data.audioContent;
+      console.log(`语音生成完成，使用音色: ${speechResponse.data.voice}`);
+
+      // 创建音频对象
+      const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      // 监听音频开始播放，启动说话动画
+      audio.addEventListener('play', () => {
+        if (window.playTalkAnimation) {
+          window.playTalkAnimation(true);
+          console.log('语音开始播放，启动说话动画');
+        }
+      });
+
+      // 监听音频播放结束，停止说话动画
+      audio.addEventListener('ended', () => {
+        if (window.playTalkAnimation) {
+          window.playTalkAnimation(false);
+          console.log('语音播放结束，停止说话动画');
+        }
+        URL.revokeObjectURL(audioUrl); // 清理URL对象
+      });
+
+      // 监听音频播放错误
+      audio.addEventListener('error', (e) => {
+        console.error('音频播放失败:', e);
+        if (window.playTalkAnimation) {
+          window.playTalkAnimation(false);
+          console.log('音频播放失败，停止说话动画');
+        }
+        URL.revokeObjectURL(audioUrl);
+      });
+
+      // 监听音频暂停（以防万一）
+      audio.addEventListener('pause', () => {
+        if (window.playTalkAnimation) {
+          window.playTalkAnimation(false);
+          console.log('语音播放暂停，停止说话动画');
+        }
+      });
+
+      // 开始播放音频（此时会触发play事件，启动动画）
+      console.log('准备播放语音...');
+      audio.play();
+    } catch (ttsError) {
+      console.error('TTS处理失败:', ttsError);
+      // TTS失败时不需要停止动画，因为动画还没开始
+    }
   } catch (error) {
     console.error('Error sending message:', error);
     alert('發送消息失敗：' + error.message);
@@ -411,22 +502,44 @@ const evaluateConversation = async () => {
     // 过滤掉错误消息
     const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
 
+    // 获取当前场景ID
+    let sceneId = currentSceneId.value || 'default_scene';
+    if (process.client) {
+      try {
+        const sceneData = localStorage.getItem('currentScene');
+        if (sceneData) {
+          const scene = JSON.parse(sceneData);
+          sceneId = scene._id || sceneId;
+        }
+      } catch (error) {
+        console.error('获取场景ID失败:', error);
+      }
+    }
+
     // 准备对话数据
     const conversationData = {
-      userId: 'root',
-      scenarioId: 'vascular_tumor_001',
+      userId: 'default_user',  // 使用与其他API一致的用户ID
+      scenarioId: sceneId,
       messages: validMessages.map(msg => ({
-        role: msg.from === 'user' ? 'trainer' : 'trainee',
+        role: msg.from === 'user' ? 'user' : 'assistant',
         content: msg.text,
         timestamp: new Date()
       }))
     };
 
+    console.log('发送评估请求:', conversationData);
+
     // 调用评估API
     const response = await axios.post("/api/evaluate-conversation", conversationData);
     
+    console.log('评估API响应:', response.data);
+    
     if (response.data.error) {
       throw new Error(response.data.error);
+    }
+
+    if (!response.data.success) {
+      throw new Error('评估失败：' + (response.data.error || '未知错误'));
     }
 
     // 显示评估结果
@@ -434,7 +547,7 @@ const evaluateConversation = async () => {
     evaluationMsg.value = response.data.evaluation_msg;
     showEvaluation.value = true;
 
-    console.log('评估成功：', response.data);
+    console.log('评估成功，评分:', response.data.rating, '评估消息:', response.data.evaluation_msg);
   } catch (error) {
     console.error('评估失败:', error);
     alert('對話評估失敗：' + error.message);
@@ -446,8 +559,8 @@ const evaluateConversation = async () => {
 /**
  * 重置训练，开始新一轮
  */
-const resetTraining = () => {
-  clearChat();
+const resetTraining = async () => {
+  await clearChat();
   trainingFinished.value = false;
   showEvaluation.value = false;
   evaluationRating.value = 0;

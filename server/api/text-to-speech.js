@@ -1,46 +1,88 @@
+/**
+ * @fileoverview 文本转语音 API - 使用Edge TTS
+ */
+
 import { defineEventHandler, readBody } from 'h3';
-import { TextToSpeechClient } from '@google-cloud/text-to-speech';
-import { writeFile } from 'node:fs/promises';
-import { Buffer } from 'node:buffer';
+import { exec } from 'child_process';
+import { promises as fs } from 'fs';
 import path from 'path';
+import { promisify } from 'util';
+import { Character } from '../models/character';
+import { connectDB, getConnectionStatus } from '../utils/db';
 
-// 设置 Google 应用凭证环境变量
-process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.cwd(), 'assets/gmail-login-421617-f23ce8ba70b9.json');
-
-const client = new TextToSpeechClient();
+const execAsync = promisify(exec);
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
 
-    // console.log('Received request with body:', body);
-
     // 验证请求体中的消息是否有效
     if (!body || typeof body.text !== 'string' || body.text.trim() === '') {
-        console.error('Invalid text provided');
-        return { error: 'Invalid text provided' };
+        console.error('无效的文本内容');
+        return { error: '无效的文本内容' };
     }
 
-    const text = body.text;
+    const { text, characterName = 'patient' } = body;
 
     try {
-        // console.log('Sending request to Google Text-to-Speech API with text:', text);
-        const request = {
-            input: { text: text },
-            voice: { languageCode: 'yue-HK', ssmlGender: 'NEUTRAL' },
-            audioConfig: { audioEncoding: 'MP3' },
+        // 确保数据库已连接
+        if (!getConnectionStatus()) {
+            await connectDB();
+        }
+
+        // 获取角色信息
+        let character = await Character.findOne({ name: characterName });
+        
+        // 如果数据库中没有角色信息，使用默认设置
+        if (!character) {
+            console.log(`角色 ${characterName} 不存在，使用默认音色`);
+            const defaultVoice = characterName === 'doctor' ? 'zh-HK-WanLungNeural' : 'zh-HK-HiuGaaiNeural';
+            character = { voice: defaultVoice };
+        }
+
+        console.log(`使用音色: ${character.voice} 为角色 ${characterName} 生成语音`);
+
+        // 创建临时文件路径
+        const tempDir = path.join(process.cwd(), 'temp');
+        await fs.mkdir(tempDir, { recursive: true });
+        
+        const timestamp = Date.now();
+        const outputFile = path.join(tempDir, `tts_${timestamp}.mp3`);
+
+        // 构建edge-tts命令
+        const command = `edge-tts --voice "${character.voice}" --text "${text.replace(/"/g, '\\"')}" --write-media "${outputFile}" --rate=+10% --volume=+5% --pitch=-5Hz`;
+        
+        console.log('执行TTS命令:', command);
+
+        // 执行edge-tts命令
+        await execAsync(command, {
+            timeout: 30000 // 30秒超时
+        });
+
+        // 读取生成的音频文件
+        const audioBuffer = await fs.readFile(outputFile);
+        const audioContent = audioBuffer.toString('base64');
+
+        // 清理临时文件
+        try {
+            await fs.unlink(outputFile);
+        } catch (cleanupError) {
+            console.error('清理临时文件失败:', cleanupError);
+        }
+
+        console.log(`TTS生成成功，音频长度: ${audioBuffer.length} 字节`);
+
+        return { 
+            audioContent,
+            characterName,
+            voice: character.voice,
+            success: true
         };
 
-        const [response] = await client.synthesizeSpeech(request);
-
-        // console.log('Received response from Google Text-to-Speech API:', response);
-
-        // Save the generated binary audio content to a local file
-        await writeFile('output.mp3', response.audioContent, 'binary');
-        // console.log('Audio content written to file: output.mp3');
-
-        return { audioContent: response.audioContent.toString('base64') };
     } catch (error) {
-        console.error('Error calling Google Text-to-Speech API:', error);
-        return { error: `Google Text-to-Speech API error: ${error.message}` };
+        console.error('Edge TTS API 错误:', error);
+        return { 
+            error: `语音生成失败: ${error.message}`,
+            success: false
+        };
     }
 });

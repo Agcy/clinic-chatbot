@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 
     // 将对话转换为评估所需的格式
     const conversationText = messages.map(msg => 
-      `${msg.role === 'trainer' ? '医生' : '病人'}: ${msg.content}`
+      `${msg.role === 'user' ? '医生' : '病人'}: ${msg.content}`
     ).join('\n\n');
 
     // 使用 OpenAI 评估对话
@@ -96,13 +96,15 @@ export default defineEventHandler(async (event) => {
           timestamp: msg.timestamp || new Date()
         })),
         rating: evaluationData.rating,
+        evaluation_msg: evaluationData.evaluation_msg,  // 保存评估消息
         createdAt: new Date()
       });
       
       await conversation.save();
-      console.log('对话评估已保存到数据库');
+      console.log('对话评估已保存到数据库，评估消息:', evaluationData.evaluation_msg);
     } catch (dbError) {
       console.error('保存评估结果失败:', dbError);
+      console.error('详细错误信息:', dbError.message);
       // 继续返回评估结果，即使保存失败
     }
 

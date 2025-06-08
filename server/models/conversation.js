@@ -13,10 +13,15 @@ const conversationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  conversationId: {
+    type: String,
+    default: null, // 扣子API返回的conversation_id
+    index: true
+  },
   messages: [{
     role: {
       type: String,
-      enum: ['trainer', 'trainee'],
+      enum: ['user', 'assistant', 'system'],
       required: true
     },
     content: {
@@ -43,5 +48,8 @@ const conversationSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// 为用户ID和对话ID创建复合索引
+conversationSchema.index({ userId: 1, conversationId: 1 });
 
 export const Conversation = mongoose.model('Conversation', conversationSchema); 

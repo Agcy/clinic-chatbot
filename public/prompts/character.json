@@ -1,0 +1,35 @@
+[
+  {
+    "name": "patient",
+    "url": "/model/patient.glb",
+    "animations": {
+      "talk": "talk",
+      "idle": "idle"
+    },
+    "voice": "zh-HK-HiuGaaiNeural",
+    "gender": "female",
+    "description": "病人角色，使用女性粤语音色"
+  },
+  {
+    "name": "doctor",
+    "url": "/model/doctor.glb",
+    "animations": {
+      "talk": "talk",
+      "idle": "idle"
+    },
+    "voice": "zh-HK-WanLungNeural",
+    "gender": "male",
+    "description": "医生角色，使用男性粤语音色"
+  },
+  {
+    "name": "patient_alt",
+    "url": "/public/model/patient.glb",
+    "animations": {
+      "talk": "talk",
+      "idle": "idle"
+    },
+    "voice": "zh-HK-HiuMaanNeural",
+    "gender": "female",
+    "description": "病人角色（备用音色），使用女性粤语音色2"
+  }
+] 

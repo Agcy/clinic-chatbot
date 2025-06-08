@@ -41,6 +41,72 @@ const error = ref('');
 let scene, camera, renderer, mixer, clock, controls;
 let sceneObj, character;
 let sceneConfig = null;
+let currentCharacterInfo = null; // 缓存当前场景的角色信息
+
+/**
+ * 通过角色模型URL获取角色信息
+ */
+const getCharacterByUrl = async (characterUrl) => {
+  try {
+    const response = await $fetch('/api/characters');
+    if (response.success) {
+      const characters = response.data;
+      // 通过URL匹配角色，考虑不同的URL格式
+      const character = characters.find(char => {
+        const charUrl = char.url.replace(/^\/public/, '').replace(/^\//, '');
+        const targetUrl = characterUrl.replace(/^\/public/, '').replace(/^\//, '');
+        return charUrl === targetUrl || char.url === characterUrl;
+      });
+      
+      if (character) {
+        console.log(`预加载角色信息: ${character.name}, 音色: ${character.voice}`);
+        return character;
+      }
+    }
+    console.warn('未找到匹配的角色，将使用默认音色');
+    return null;
+  } catch (error) {
+    console.error('获取角色信息失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 预加载当前场景的角色信息
+ */
+const preloadCharacterInfo = async () => {
+  if (!sceneConfig?.characterModel?.url) {
+    console.warn('场景配置中没有角色模型URL');
+    return;
+  }
+
+  try {
+    const characterUrl = sceneConfig.characterModel.url;
+    console.log(`预加载角色信息，模型URL: ${characterUrl}`);
+    
+    currentCharacterInfo = await getCharacterByUrl(characterUrl);
+    
+    if (currentCharacterInfo) {
+      // 将角色信息暴露到全局，供ChatBoxComponent使用
+      window.currentSceneCharacter = currentCharacterInfo;
+      console.log(`角色信息已缓存: ${currentCharacterInfo.name} (${currentCharacterInfo.voice})`);
+    } else {
+      // 设置默认角色信息
+      window.currentSceneCharacter = {
+        name: 'patient',
+        voice: 'zh-HK-HiuGaaiNeural'
+      };
+      console.log('使用默认角色信息: patient');
+    }
+  } catch (error) {
+    console.error('预加载角色信息失败:', error);
+    // 设置默认角色信息
+    window.currentSceneCharacter = {
+      name: 'patient',
+      voice: 'zh-HK-HiuGaaiNeural'
+    };
+  }
+};
 
 /**
  * 从API获取场景配置
@@ -49,9 +115,14 @@ const fetchSceneConfig = async () => {
   try {
     // 优先从 ScenePosition 数据表获取完整配置
     const response = await $fetch(`/api/scene-positions?configId=${props.configId}`);
-    sceneConfig = response;
-    console.log('从ScenePosition获取到场景配置:', sceneConfig);
-    return;
+    
+    if (response.success && response.data) {
+      sceneConfig = response.data;
+      console.log('从ScenePosition获取到场景配置:', sceneConfig);
+      return;
+    } else {
+      throw new Error(response.error || '获取场景配置失败');
+    }
   } catch (scenePositionError) {
     console.log('ScenePosition配置未找到，configId:', props.configId, '错误:', scenePositionError.message);
     
@@ -444,6 +515,9 @@ const initializeScene = async () => {
       loadScene(),
       loadCharacter()
     ]);
+
+    // 预加载角色信息（用于TTS）
+    await preloadCharacterInfo();
     
     // 开始动画循环
     animate();
@@ -459,6 +533,11 @@ const initializeScene = async () => {
 // 监听configId变化
 watch(() => props.configId, () => {
   if (sceneContainer.value) {
+    // 清除旧的角色信息缓存
+    currentCharacterInfo = null;
+    window.currentSceneCharacter = null;
+    console.log('场景变化，清除角色信息缓存');
+    
     initializeScene();
   }
 });

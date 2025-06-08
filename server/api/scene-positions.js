@@ -2,8 +2,9 @@
  * @fileoverview 3D场景位置配置API接口
  */
 
+import { defineEventHandler, getMethod, getQuery, readBody, createError } from 'h3';
 import { ScenePosition } from '../models/scenePosition.js';
-import { connectDB } from '../config/db.js';
+import { connectDB } from '../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
@@ -47,16 +48,22 @@ async function handleGet(event) {
     // 获取特定配置
     const config = await ScenePosition.findOne({ configId });
     if (!config) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: '配置未找到'
-      });
+      return {
+        success: false,
+        error: '配置未找到'
+      };
     }
-    return config;
+    return {
+      success: true,
+      data: config
+    };
   } else {
     // 获取所有配置
     const configs = await ScenePosition.find().sort({ createdAt: -1 });
-    return configs;
+    return {
+      success: true,
+      data: configs
+    };
   }
 }
 

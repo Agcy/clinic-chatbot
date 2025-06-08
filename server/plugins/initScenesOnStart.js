@@ -5,6 +5,7 @@
 import { defineNitroPlugin } from 'nitropack/runtime';
 import { Scene } from '~/server/models/scene.js';
 import { ScenePosition } from '~/server/models/scenePosition.js';
+import { Character } from '~/server/models/character.js';
 import { connectDB } from '~/server/utils/db.js';
 import fs from 'fs';
 import path from 'path';
@@ -66,6 +67,33 @@ export default defineNitroPlugin(async (nitroApp) => {
       console.log(`Scene (卡片) 初始化完成，共处理 ${sceneCardCount} 个场景卡片。`);
     } else {
       console.warn('scene_json.json 未找到，跳过 Scene (卡片) 初始化。');
+    }
+
+    // 3. 初始化 Character (角色数据)
+    const characterJsonPath = path.join(process.cwd(), 'public', 'prompts', 'character.json');
+    if (fs.existsSync(characterJsonPath)) {
+      const charactersData = JSON.parse(fs.readFileSync(characterJsonPath, 'utf8'));
+      let characterCount = 0;
+      for (const charData of charactersData) {
+        try {
+          await Character.findOneAndUpdate(
+            { name: charData.name },
+            charData,
+            { 
+              upsert: true, 
+              new: true,
+              runValidators: true
+            }
+          );
+          characterCount++;
+          console.log(`已添加/更新 Character: ${charData.name} (${charData.voice})`);
+        } catch (error) {
+          console.error(`初始化角色 ${charData.name} 失败:`, error.message);
+        }
+      }
+      console.log(`Character 初始化完成，共处理 ${characterCount} 个角色。`);
+    } else {
+      console.warn('character.json 未找到，跳过 Character 初始化。');
     }
 
     console.log('数据初始化流程完成。');

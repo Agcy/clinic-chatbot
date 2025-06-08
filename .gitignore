@@ -26,3 +26,5 @@ logs
 public/model/*
 
 output.mp3
+
+test/
