@@ -100,56 +100,8 @@ const fetchAvailableConfigs = async () => {
         // 优先使用场景中定义的 config_id
         const configId = scene.config_id || ('scene-' + scene.scene_id);
         
-        return {
-          configId: configId,
-          name: scene.scene_title || '未命名场景',
-          description: scene.scene_description_model || '',
-          sceneModel: {
-            url: '/model/operation_room.glb',
-            position: { x: 0, y: -0.5, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 }
-          },
-          characterModel: {
-            url: '/model/doctor.glb',
-            position: { x: 0, y: -0.5, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 }
-          },
-          camera: {
-            position: { x: 0, y: 0.7, z: 2 },
-            lookAt: { x: 0, y: 0.7, z: 2 },
-            fov: 75,
-            near: 0.1,
-            far: 1000
-          },
-          lighting: {
-            hemisphereLight: {
-              skyColor: '#ffffff',
-              groundColor: '#8d8d8d',
-              intensity: 6.0,
-              position: { x: 0, y: 10, z: 0 }
-            },
-            directionalLight: {
-              color: '#ffffff',
-              intensity: 3.0,
-              position: { x: 5, y: 5, z: 2 },
-              castShadow: true
-            },
-            ambientLight: {
-              color: '#ffffff',
-              intensity: 5.0
-            }
-          },
-          background: {
-            type: 'color',
-            value: '#87CEEB'
-          },
-          renderer: {
-            toneMappingExposure: 0.4,
-            toneMapping: 'ACESFilmicToneMapping'
-          }
-        };
+        // 不创建默认配置，而是抛出错误要求正确配置
+        throw new Error(`场景 ${scene.scene_id} 没有对应的3D配置，请检查config_id是否正确设置`);
       });
       
       availableConfigs.value = sceneConfigs;
@@ -157,116 +109,13 @@ const fetchAvailableConfigs = async () => {
       return;
     }
     
-    // 如果都没有，使用默认配置
-    availableConfigs.value = [
-      {
-        configId: 'doctor-operating-room',
-        name: '医生-手术室场景',
-        description: '医生在手术室的3D场景配置',
-        sceneModel: { 
-          url: '/model/operation_room.glb',
-          position: { x: 0, y: -0.5, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        characterModel: { 
-          url: '/model/doctor.glb',
-          position: { x: 0, y: -0.5, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        camera: {
-          position: { x: 0, y: 0.7, z: 2 },
-          lookAt: { x: 0, y: 0.7, z: 2 },
-          fov: 75,
-          near: 0.1,
-          far: 1000
-        },
-        lighting: {
-          hemisphereLight: {
-            skyColor: '#ffffff',
-            groundColor: '#8d8d8d',
-            intensity: 6.0,
-            position: { x: 0, y: 10, z: 0 }
-          },
-          directionalLight: {
-            color: '#ffffff',
-            intensity: 3.0,
-            position: { x: 5, y: 5, z: 2 },
-            castShadow: true
-          },
-          ambientLight: {
-            color: '#ffffff',
-            intensity: 5.0
-          }
-        },
-        background: {
-          type: 'color',
-          value: '#87CEEB'
-        },
-        renderer: {
-          toneMappingExposure: 0.4,
-          toneMapping: 'ACESFilmicToneMapping'
-        }
-      }
-    ];
-    console.log('使用默认配置');
+    // 如果都没有配置数据，抛出错误
+    throw new Error('没有找到任何场景配置数据，请检查数据库是否正确初始化');
     
   } catch (error) {
     console.error('获取配置列表失败:', error);
-    // 如果获取失败，使用默认配置
-    availableConfigs.value = [
-      {
-        configId: 'doctor-operating-room',
-        name: '医生-手术室场景',
-        description: '医生在手术室的3D场景配置',
-        sceneModel: { 
-          url: '/model/operation_room.glb',
-          position: { x: 0, y: -0.5, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        characterModel: { 
-          url: '/model/doctor.glb',
-          position: { x: 0, y: -0.5, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        camera: {
-          position: { x: 0, y: 0.7, z: 2 },
-          lookAt: { x: 0, y: 0.7, z: 2 },
-          fov: 75,
-          near: 0.1,
-          far: 1000
-        },
-        lighting: {
-          hemisphereLight: {
-            skyColor: '#ffffff',
-            groundColor: '#8d8d8d',
-            intensity: 6.0,
-            position: { x: 0, y: 10, z: 0 }
-          },
-          directionalLight: {
-            color: '#ffffff',
-            intensity: 3.0,
-            position: { x: 5, y: 5, z: 2 },
-            castShadow: true
-          },
-          ambientLight: {
-            color: '#ffffff',
-            intensity: 5.0
-          }
-        },
-        background: {
-          type: 'color',
-          value: '#87CEEB'
-        },
-        renderer: {
-          toneMappingExposure: 0.4,
-          toneMapping: 'ACESFilmicToneMapping'
-        }
-      }
-    ];
+    // 抛出错误，不使用默认配置
+    throw error;
   }
 };
 

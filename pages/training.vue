@@ -4,9 +4,14 @@
     <!-- 3D场景背景 -->
     <div class="scene-background">
       <ThreeDSceneLoaderWithConfig
+        v-if="sceneConfigId"
         :config-id="sceneConfigId"
         :enable-controls="false"
       />
+      <div v-else class="loading-scene">
+        <div class="loading-spinner"></div>
+        <p>正在加载场景配置...</p>
+      </div>
     </div>
     
     <!-- 左侧提示卡片 -->
@@ -43,20 +48,21 @@ const isCardCollapsed = ref(false);
 
 // 根据当前场景确定配置ID
 const sceneConfigId = computed(() => {
-  if (!currentScene.value) return 'doctor-operating-room';
-  
-  // 根据场景内容确定配置ID
-  const sceneText = ((currentScene.value.scene_title || '') + ' ' + 
-                    (currentScene.value.scene_description_charactor || '') + ' ' + 
-                    (currentScene.value.model_charactor || '')).toLowerCase();
-  
-  if (sceneText.includes('医生') || sceneText.includes('doctor') || sceneText.includes('医师')) {
-    return 'doctor-operating-room';
-  } else if (sceneText.includes('病人') || sceneText.includes('患者') || sceneText.includes('patient')) {
-    return 'patient-operating-room';
+  // 如果场景数据还未加载，返回null（ThreeDSceneLoaderWithConfig会处理这种情况）
+  if (!currentScene.value) {
+    return null;
   }
   
-  return 'doctor-operating-room'; // 默认配置
+  // 直接使用场景数据中的config_id字段
+  const configId = currentScene.value.config_id;
+  
+  if (!configId) {
+    console.error(`场景 ${currentScene.value.scene_id} 缺少config_id配置`);
+    return null;
+  }
+  
+  console.log(`场景 ${currentScene.value.scene_id} 使用配置ID: ${configId}`);
+  return configId;
 });
 
 // 切换提示卡片的展开/收起状态
@@ -164,5 +170,30 @@ onMounted(() => {
   line-height: 1.5;
   color: #4a5568;
   white-space: pre-wrap;
+}
+
+.loading-scene {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style> 

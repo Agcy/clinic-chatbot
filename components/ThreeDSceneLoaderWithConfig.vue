@@ -91,20 +91,11 @@ const preloadCharacterInfo = async () => {
       window.currentSceneCharacter = currentCharacterInfo;
       console.log(`角色信息已缓存: ${currentCharacterInfo.name} (${currentCharacterInfo.voice})`);
     } else {
-      // 设置默认角色信息
-      window.currentSceneCharacter = {
-        name: 'patient',
-        voice: 'zh-HK-HiuGaaiNeural'
-      };
-      console.log('使用默认角色信息: patient');
+      throw new Error(`找不到模型URL为 ${characterUrl} 的角色配置，请检查character.json或数据库中是否存在对应配置`);
     }
   } catch (error) {
     console.error('预加载角色信息失败:', error);
-    // 设置默认角色信息
-    window.currentSceneCharacter = {
-      name: 'patient',
-      voice: 'zh-HK-HiuGaaiNeural'
-    };
+    throw error;
   }
 };
 
@@ -112,6 +103,11 @@ const preloadCharacterInfo = async () => {
  * 从API获取场景配置
  */
 const fetchSceneConfig = async () => {
+  // 检查configId是否有效
+  if (!props.configId) {
+    throw new Error('configId为空，无法获取场景配置');
+  }
+
   try {
     // 优先从 ScenePosition 数据表获取完整配置
     const response = await $fetch(`/api/scene-positions?configId=${props.configId}`);
@@ -124,61 +120,8 @@ const fetchSceneConfig = async () => {
       throw new Error(response.error || '获取场景配置失败');
     }
   } catch (scenePositionError) {
-    console.log('ScenePosition配置未找到，configId:', props.configId, '错误:', scenePositionError.message);
-    
-    // 如果找不到 ScenePosition 配置，提供一个最基本的默认配置
-    sceneConfig = {
-      configId: props.configId,
-      name: '默认场景',
-      description: '基础3D场景配置',
-      sceneModel: {
-        url: '/model/operation_room.glb',
-        position: { x: 0, y: -0.5, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 }
-      },
-      characterModel: {
-        url: '/model/doctor.glb',
-        position: { x: 0, y: -0.5, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 }
-      },
-      camera: {
-        position: { x: 0, y: 0.7, z: 2 },
-        lookAt: { x: 0, y: 0.7, z: 2 },
-        fov: 75,
-        near: 0.1,
-        far: 1000
-      },
-      lighting: {
-        hemisphereLight: {
-          skyColor: '#ffffff',
-          groundColor: '#8d8d8d',
-          intensity: 6.0,
-          position: { x: 0, y: 10, z: 0 }
-        },
-        directionalLight: {
-          color: '#ffffff',
-          intensity: 3.0,
-          position: { x: 5, y: 5, z: 2 },
-          castShadow: true
-        },
-        ambientLight: {
-          color: '#ffffff',
-          intensity: 5.0
-        }
-      },
-      background: {
-        type: 'color',
-        value: '#87CEEB'
-      },
-      renderer: {
-        toneMappingExposure: 0.4,
-        toneMapping: 'ACESFilmicToneMapping'
-      }
-    };
-    
-    console.log('使用默认配置:', sceneConfig);
+    console.error('ScenePosition配置未找到，configId:', props.configId, '错误:', scenePositionError.message);
+    throw new Error(`找不到configId=${props.configId}的场景配置，请检查数据库中是否存在对应配置`);
   }
 };
 
@@ -475,25 +418,57 @@ const handleResize = () => {
   renderer.setSize(width, height);
 };
 
+// 动画循环控制
+let animationId = null;
+let isSceneReady = false;
+
 /**
  * 动画循环
  */
 const animate = () => {
-  requestAnimationFrame(animate);
-
-  // 更新动画
-  const delta = clock.getDelta();
-  if (mixer) mixer.update(delta);
-  
-  // 更新补间动画
-  TWEEN.update();
-
-  // 更新控制器
-  if (controls) controls.update();
-
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera);
+  // 只有在场景准备就绪且没有错误时才继续动画循环
+  if (!isSceneReady || error.value) {
+    console.log('场景未准备就绪或存在错误，停止动画循环');
+    return;
   }
+
+  animationId = requestAnimationFrame(animate);
+
+  // 安全检查：确保所有必要对象都存在
+  if (!renderer || !scene || !camera || !clock) {
+    console.warn('缺少必要的渲染对象，跳过此帧');
+    return;
+  }
+
+  try {
+    // 更新动画
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+    
+    // 更新补间动画
+    TWEEN.update();
+
+    // 更新控制器
+    if (controls) controls.update();
+
+    // 渲染场景
+    renderer.render(scene, camera);
+  } catch (renderError) {
+    console.error('渲染过程中发生错误:', renderError);
+    isSceneReady = false;
+    error.value = '渲染错误: ' + renderError.message;
+  }
+};
+
+/**
+ * 停止动画循环
+ */
+const stopAnimation = () => {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  isSceneReady = false;
 };
 
 /**
@@ -501,8 +476,12 @@ const animate = () => {
  */
 const initializeScene = async () => {
   try {
+    // 停止之前的动画循环
+    stopAnimation();
+    
     loading.value = true;
     error.value = '';
+    isSceneReady = false;
     
     // 获取场景配置
     await fetchSceneConfig();
@@ -519,44 +498,100 @@ const initializeScene = async () => {
     // 预加载角色信息（用于TTS）
     await preloadCharacterInfo();
     
+    // 所有步骤成功完成，标记场景为准备就绪
+    isSceneReady = true;
+    loading.value = false;
+    
     // 开始动画循环
     animate();
     
-    loading.value = false;
+    console.log('场景初始化完成，开始渲染');
   } catch (err) {
     console.error('场景初始化失败:', err);
+    
+    // 确保停止动画循环
+    stopAnimation();
+    
     loading.value = false;
     error.value = err.message || '场景初始化失败';
+    
+    // 清理可能已创建的对象
+    if (renderer) {
+      renderer.clear();
+    }
   }
 };
 
 // 监听configId变化
-watch(() => props.configId, () => {
-  if (sceneContainer.value) {
+watch(() => props.configId, (newConfigId) => {
+  // 只有当configId有效且容器已准备好时才初始化场景
+  if (newConfigId && sceneContainer.value) {
     // 清除旧的角色信息缓存
     currentCharacterInfo = null;
     window.currentSceneCharacter = null;
     console.log('场景变化，清除角色信息缓存');
     
     initializeScene();
+  } else if (!newConfigId) {
+    // 如果configId为null，停止当前渲染并显示加载状态
+    stopAnimation();
+    loading.value = true;
+    error.value = '';
+    console.log('configId为空，等待数据加载...');
   }
 });
 
 // 生命周期管理
 onMounted(() => {
-  initializeScene();
+  // 只有当configId有效时才初始化场景
+  if (props.configId) {
+    initializeScene();
+  } else {
+    loading.value = true;
+    console.log('组件挂载时configId为空，等待数据加载...');
+  }
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
+  console.log('组件卸载，清理Three.js资源');
+  
+  // 停止动画循环
+  stopAnimation();
+  
+  // 清理事件监听器
   window.removeEventListener('resize', handleResize);
+  
+  // 清理Three.js对象
   if (renderer) {
     renderer.dispose();
     renderer.forceContextLoss();
+    renderer = null;
   }
   if (controls) {
     controls.dispose();
+    controls = null;
   }
+  if (scene) {
+    scene.clear();
+    scene = null;
+  }
+  if (camera) {
+    camera = null;
+  }
+  if (mixer) {
+    mixer.stopAllAction();
+    mixer = null;
+  }
+  
+  // 清理全局动画函数
+  if (window.playTalkAnimation) {
+    window.playTalkAnimation = null;
+  }
+  
+  // 清理角色信息缓存
+  currentCharacterInfo = null;
+  window.currentSceneCharacter = null;
 });
 </script>
 

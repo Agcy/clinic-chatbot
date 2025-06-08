@@ -19,7 +19,7 @@
 		"model_charactor": "病人唐",
 		"trainee_character": "脑外科医生",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room-2"
 	},
 	{
 		"scene_id": "after_xray_001",
@@ -30,7 +30,7 @@
 		"model_charactor": "病人卓敏",
 		"trainee_character": "医生（唐、黎）",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room"
 	},
 	{
 		"scene_id": "gynecology_examination_001",
@@ -41,7 +41,7 @@
 		"model_charactor": "病人周小姐",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room"
 	},
 	{
 		"scene_id": "gynecology_abdominal_pain_001",
@@ -52,7 +52,7 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room-2"
 	},
 	{
 		"scene_id": "gynecology_hospitalization_001",
@@ -63,7 +63,7 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room"
 	},
 	{
 		"scene_id": "gastroenterology_abdominal_pain_001",
@@ -74,6 +74,6 @@
 		"model_charactor": "病人陳先生",
 		"trainee_character": "腸胃科醫生張醫生",
 		"scene_type": "医生对病人",
-		"config_id": "doctor-operating-room"
+		"config_id": "patient-operating-room-2"
 	}
 ]

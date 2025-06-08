@@ -184,7 +184,7 @@
     "name": "病人-手术室场景2",
     "description": "病人在手术室的3D场景配置",
     "sceneModel": {
-      "url": "/public/model/operation_room.glb",
+      "url": "/model/operation_room.glb",
       "position": {
         "x": -4,
         "y": -0.5,
@@ -202,7 +202,7 @@
       }
     },
     "characterModel": {
-      "url": "/public/model/patient.glb",
+      "url": "/model/patient.glb",
       "position": {
         "x": 0,
         "y": -0.5,

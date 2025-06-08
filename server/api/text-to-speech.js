@@ -32,11 +32,13 @@ export default defineEventHandler(async (event) => {
         // 获取角色信息
         let character = await Character.findOne({ name: characterName });
         
-        // 如果数据库中没有角色信息，使用默认设置
+        // 如果数据库中没有角色信息，抛出错误
         if (!character) {
-            console.log(`角色 ${characterName} 不存在，使用默认音色`);
-            const defaultVoice = characterName === 'doctor' ? 'zh-HK-WanLungNeural' : 'zh-HK-HiuGaaiNeural';
-            character = { voice: defaultVoice };
+            console.error(`角色 ${characterName} 不存在于数据库中`);
+            return { 
+                error: `角色 ${characterName} 配置不存在，请检查数据库或character.json配置`,
+                success: false
+            };
         }
 
         console.log(`使用音色: ${character.voice} 为角色 ${characterName} 生成语音`);

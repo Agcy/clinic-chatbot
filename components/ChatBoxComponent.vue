@@ -202,12 +202,9 @@ const getCurrentSceneCharacter = () => {
     return window.currentSceneCharacter;
   }
   
-  // 如果没有预加载信息，返回默认值
-  console.log('未找到预加载的角色信息，使用默认角色: patient');
-  return {
-    name: 'patient',
-    voice: 'zh-HK-HiuGaaiNeural'
-  };
+  // 如果没有预加载信息，抛出错误
+  console.error('未找到预加载的角色信息，无法继续');
+  throw new Error('角色信息未预加载，请确认场景配置正确');
 };
 
 // 组件挂载时
@@ -502,18 +499,22 @@ const evaluateConversation = async () => {
     // 过滤掉错误消息
     const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
 
-    // 获取当前场景ID
-    let sceneId = currentSceneId.value || 'default_scene';
+    // 获取当前场景ID（必须有效）
+    let sceneId = currentSceneId.value;
     if (process.client) {
       try {
         const sceneData = localStorage.getItem('currentScene');
         if (sceneData) {
           const scene = JSON.parse(sceneData);
-          sceneId = scene._id || sceneId;
+          sceneId = scene._id;
         }
       } catch (error) {
         console.error('获取场景ID失败:', error);
       }
+    }
+    
+    if (!sceneId) {
+      throw new Error('场景ID未找到，无法评估对话');
     }
 
     // 准备对话数据

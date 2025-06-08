@@ -23,7 +23,7 @@
   },
   {
     "name": "patient_alt",
-    "url": "/public/model/patient.glb",
+    "url": "/model/patient.glb",
     "animations": {
       "talk": "talk",
       "idle": "idle"

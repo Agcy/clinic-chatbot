@@ -50,8 +50,12 @@ export default defineNitroPlugin(async (nitroApp) => {
             console.warn('发现缺少 scene_id 的场景卡片，跳过处理:', sceneCard.scene_title);
             continue;
           }
-          // 确保 config_id 存在，否则默认为 doctor-operating-room
-          const configIdToUse = sceneCard.config_id || 'doctor-operating-room';
+          // 确保 config_id 存在，必须明确指定
+          if (!sceneCard.config_id) {
+            console.error(`场景卡片 ${sceneCard.scene_id} 缺少必需的 config_id 字段，跳过处理`);
+            continue;
+          }
+          const configIdToUse = sceneCard.config_id;
 
           await Scene.findOneAndUpdate(
             { scene_id: sceneCard.scene_id },
