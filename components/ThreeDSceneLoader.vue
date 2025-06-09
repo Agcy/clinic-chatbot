@@ -85,7 +85,6 @@ const isFbxFormat = (url) => {
  */
 const loadScene = async () => {
   try {
-    console.log(`加载场景: ${props.sceneUrl}`);
     
     if (isFbxFormat(props.sceneUrl)) {
       // 使用FBX加载器
@@ -116,7 +115,6 @@ const loadScene = async () => {
     });
     
     scene.add(sceneObj);
-    console.log('场景加载成功');
   } catch (error) {
     console.error('场景加载失败:', error);
   }
@@ -127,7 +125,6 @@ const loadScene = async () => {
  */
 const loadCharacter = async () => {
   try {
-    console.log(`加载角色: ${props.characterUrl}`);
     
     let characterObj, animations;
     
@@ -172,7 +169,6 @@ const loadCharacter = async () => {
       action.play();
     }
     
-    console.log('角色加载成功');
   } catch (error) {
     console.error('角色加载失败:', error);
   }

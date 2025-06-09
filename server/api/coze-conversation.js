@@ -48,7 +48,7 @@ function parseStreamResponse(streamText) {
     let finalContent = '';
     let isCompleted = false;
     
-    console.log('开始解析流式响应，总行数:', lines.length);
+    // console.log('开始解析流式响应，总行数:', lines.length);
     
     for (const line of lines) {
         const trimmedLine = line.trim();
@@ -69,7 +69,7 @@ function parseStreamResponse(streamText) {
             
             try {
                 const data = JSON.parse(dataContent);
-                console.log('解析到的数据块:', data);
+                // console.log('解析到的数据块:', data);
                 
                 // 提取conversation_id
                 if (data.conversation_id) {
@@ -123,8 +123,10 @@ function parseStreamResponse(streamText) {
     // 最终内容清理
     finalContent = cleanFinalContent(finalContent);
     
-    console.log('流式解析完成，最终内容:', finalContent);
-    console.log('conversation_id:', conversationId);
+    // 只在有错误时输出日志
+    if (!finalContent && !conversationId) {
+        console.log('流式解析完成但没有获取到内容和conversation_id');
+    }
     
     // 构建响应数据，模拟标准格式
     return {
@@ -184,7 +186,7 @@ export default defineEventHandler(async (event) => {
             cozeRequestBody.conversation_id = conversationId;
         }
 
-        console.log('发送给扣子API的请求体:', JSON.stringify(cozeRequestBody, null, 2));
+        // console.log('发送给扣子API的请求体:', JSON.stringify(cozeRequestBody, null, 2));
 
         // 调用扣子API
         const response = await fetch(COZE_API_URL, {
@@ -204,26 +206,26 @@ export default defineEventHandler(async (event) => {
 
         // 处理响应（自动检测JSON或流式）
         const rawResponseText = await response.text();
-        console.log('扣子API原始响应:', rawResponseText.substring(0, 200) + '...');
+        // console.log('扣子API原始响应:', rawResponseText.substring(0, 200) + '...');
 
         let responseData;
         try {
             // 尝试直接解析JSON
             responseData = JSON.parse(rawResponseText);
-            console.log('成功解析为JSON响应');
+            // console.log('成功解析为JSON响应');
         } catch (parseError) {
             // 如果是流式响应（Server-Sent Events格式），解析流式数据
-            console.log('检测到流式响应，开始解析...');
+            // console.log('检测到流式响应，开始解析...');
             responseData = parseStreamResponse(rawResponseText);
         }
         
-        console.log('解析后的扣子API响应:', responseData);
+        // console.log('解析后的扣子API响应:', responseData);
 
         // 提取conversation_id并存储
         if (responseData.conversation_id || responseData.data?.conversation_id) {
             const newConversationId = responseData.conversation_id || responseData.data.conversation_id;
             userConversationMap.set(userId, newConversationId);
-            console.log(`已更新用户 ${userId} 的conversation_id: ${newConversationId}`);
+            // console.log(`已更新用户 ${userId} 的conversation_id: ${newConversationId}`);
         }
 
         // 处理扣子API的响应

@@ -59,7 +59,6 @@ const getCharacterByUrl = async (characterUrl) => {
       });
       
       if (character) {
-        console.log(`预加载角色信息: ${character.name}, 音色: ${character.voice}`);
         return character;
       }
     }
@@ -82,7 +81,6 @@ const preloadCharacterInfo = async () => {
 
   try {
     const characterUrl = sceneConfig.characterModel.url;
-    console.log(`预加载角色信息，模型URL: ${characterUrl}`);
     
     currentCharacterInfo = await getCharacterByUrl(characterUrl);
     
@@ -114,7 +112,6 @@ const fetchSceneConfig = async () => {
     
     if (response.success && response.data) {
       sceneConfig = response.data;
-      console.log('从ScenePosition获取到场景配置:', sceneConfig);
       return;
     } else {
       throw new Error(response.error || '获取场景配置失败');
@@ -247,7 +244,6 @@ const loadScene = async () => {
   
   try {
     const sceneModelConfig = sceneConfig.sceneModel;
-    console.log(`加载场景: ${sceneModelConfig.url}`);
     
     if (isFbxFormat(sceneModelConfig.url)) {
       const loader = new FBXLoader();
@@ -290,7 +286,6 @@ const loadScene = async () => {
     });
     
     scene.add(sceneObj);
-    console.log('场景加载成功');
   } catch (err) {
     console.error('场景加载失败:', err);
     error.value = '场景加载失败: ' + err.message;
@@ -305,7 +300,6 @@ const loadCharacter = async () => {
   
   try {
     const characterModelConfig = sceneConfig.characterModel;
-    console.log(`加载角色: ${characterModelConfig.url}`);
     
     let characterObj, animations;
     
@@ -396,7 +390,6 @@ const loadCharacter = async () => {
       };
     }
     
-    console.log('角色加载成功');
   } catch (err) {
     console.error('角色加载失败:', err);
     error.value = '角色加载失败: ' + err.message;
@@ -505,7 +498,6 @@ const initializeScene = async () => {
     // 开始动画循环
     animate();
     
-    console.log('场景初始化完成，开始渲染');
   } catch (err) {
     console.error('场景初始化失败:', err);
     

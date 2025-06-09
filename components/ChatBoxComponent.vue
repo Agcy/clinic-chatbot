@@ -53,14 +53,24 @@
       <!-- 输入区域 -->
       <div class="p-4 pt-2 pb-4 border-t border-gray-200/50">
         <form @submit.prevent="sendMessage" class="space-y-3">
-          <div class="relative">
+          <div class="relative flex gap-2">
             <input
                 v-model="userInput"
                 type="text"
                 placeholder="输入消息..."
-                class="w-full px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm"
+                class="flex-1 px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm"
                 :disabled="trainingFinished"
             />
+            <button
+                type="submit"
+                :disabled="!userInput.trim() || trainingFinished"
+                class="send-btn bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem] group"
+                title="发送消息 (Enter)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            </button>
           </div>
           <div class="flex flex-wrap justify-center gap-3">
             <!-- 训练中按钮组 -->
@@ -147,10 +157,13 @@ const currentSceneId = ref(null);
 
 let mediaRecorder;
 let audioChunks = [];
+let sttSessionId = null;
+let audioContext = null;
+let processor = null;
 
 // 清空聊天记录
 const clearChat = async () => {
-  console.log('清空聊天记录');
+  // console.log('清空聊天记录');
   
   try {
     // 调用API清除conversation_id
@@ -198,7 +211,7 @@ const initCurrentScene = () => {
 const getCurrentSceneCharacter = () => {
   // 直接从全局变量获取预加载的角色信息
   if (window.currentSceneCharacter) {
-    console.log(`使用预加载的角色信息: ${window.currentSceneCharacter.name} (${window.currentSceneCharacter.voice})`);
+    // console.log(`使用预加载的角色信息: ${window.currentSceneCharacter.name} (${window.currentSceneCharacter.voice})`);
     return window.currentSceneCharacter;
   }
   
@@ -275,7 +288,7 @@ const sendMessage = async () => {
       }
     }
 
-    console.log('Sending message to API:', userMessage);
+    // console.log('Sending message to API:', userMessage);
     const aiResponse = await axios.post("/api/coze-conversation", { 
         message: userMessage,
         systemPrompt: systemPrompt,
@@ -302,7 +315,7 @@ const sendMessage = async () => {
       const currentCharacter = getCurrentSceneCharacter();
       const characterName = currentCharacter.name;
 
-      console.log('开始生成语音...');
+      // console.log('开始生成语音...');
       // 调用新的Edge TTS API，传入角色名称
       const speechResponse = await axios.post("/api/text-to-speech", { 
         text: reply,
@@ -314,51 +327,51 @@ const sendMessage = async () => {
       }
 
       const audioContent = speechResponse.data.audioContent;
-      console.log(`语音生成完成，使用音色: ${speechResponse.data.voice}`);
+      // console.log(`语音生成完成，使用音色: ${speechResponse.data.voice}`);
 
       // 创建音频对象
       const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // 监听音频开始播放，启动说话动画
-      audio.addEventListener('play', () => {
-        if (window.playTalkAnimation) {
-          window.playTalkAnimation(true);
-          console.log('语音开始播放，启动说话动画');
-        }
-      });
+        // 监听音频开始播放，启动说话动画
+        audio.addEventListener('play', () => {
+          if (window.playTalkAnimation) {
+            window.playTalkAnimation(true);
+            // console.log('语音开始播放，启动说话动画');
+          }
+        });
 
-      // 监听音频播放结束，停止说话动画
-      audio.addEventListener('ended', () => {
-        if (window.playTalkAnimation) {
-          window.playTalkAnimation(false);
-          console.log('语音播放结束，停止说话动画');
-        }
-        URL.revokeObjectURL(audioUrl); // 清理URL对象
-      });
+        // 监听音频播放结束，停止说话动画
+        audio.addEventListener('ended', () => {
+          if (window.playTalkAnimation) {
+            window.playTalkAnimation(false);
+            // console.log('语音播放结束，停止说话动画');
+          }
+          URL.revokeObjectURL(audioUrl); // 清理URL对象
+        });
 
-      // 监听音频播放错误
-      audio.addEventListener('error', (e) => {
-        console.error('音频播放失败:', e);
-        if (window.playTalkAnimation) {
-          window.playTalkAnimation(false);
-          console.log('音频播放失败，停止说话动画');
-        }
-        URL.revokeObjectURL(audioUrl);
-      });
+        // 监听音频播放错误
+        audio.addEventListener('error', (e) => {
+          console.error('音频播放失败:', e);
+          if (window.playTalkAnimation) {
+            window.playTalkAnimation(false);
+            // console.log('音频播放失败，停止说话动画');
+          }
+          URL.revokeObjectURL(audioUrl);
+        });
 
-      // 监听音频暂停（以防万一）
-      audio.addEventListener('pause', () => {
-        if (window.playTalkAnimation) {
-          window.playTalkAnimation(false);
-          console.log('语音播放暂停，停止说话动画');
-        }
-      });
+        // 监听音频暂停（以防万一）
+        audio.addEventListener('pause', () => {
+          if (window.playTalkAnimation) {
+            window.playTalkAnimation(false);
+            // console.log('语音播放暂停，停止说话动画');
+          }
+        });
 
-      // 开始播放音频（此时会触发play事件，启动动画）
-      console.log('准备播放语音...');
-      audio.play();
+        // 开始播放音频（此时会触发play事件，启动动画）
+        // console.log('准备播放语音...');
+        audio.play();
     } catch (ttsError) {
       console.error('TTS处理失败:', ttsError);
       // TTS失败时不需要停止动画，因为动画还没开始
@@ -378,61 +391,71 @@ const startRecording = async () => {
       throw new Error('您的瀏覽器不支持音頻錄製功能');
     }
 
+    // console.log('🎤 开始流式录音...');
     isRecording.value = true;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        sampleRate: 16000,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true
+      }
+    });
+    
+    // 保存stream引用用于停止时清理
+    window.currentAudioStream = stream;
 
-    const mimeType = getSupportedContentMimeType();
-    if (!mimeType) {
-      throw new Error('當前瀏覽器不支持任何音頻格式');
-    }
-
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data);
+    // 创建音频上下文
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: 16000
+    });
+    
+    const source = audioContext.createMediaStreamSource(stream);
+    
+    // 创建ScriptProcessor或AudioWorklet进行实时音频处理
+    processor = audioContext.createScriptProcessor(4096, 1, 1);
+    
+    // 初始化STT会话
+    await initSTTSession();
+    
+    let audioBuffer = [];
+    
+    // 将audioBuffer保存到window对象供停止录音时访问
+    window.audioBufferData = audioBuffer;
+    
+    processor.onaudioprocess = async (e) => {
+      if (!isRecording.value || !sttSessionId) return;
+      
+      const inputBuffer = e.inputBuffer;
+      const inputData = inputBuffer.getChannelData(0);
+      
+      // 转换为16位PCM（小端序）
+      const pcmData = new Int16Array(inputData.length);
+      for (let i = 0; i < inputData.length; i++) {
+        // 确保样本在[-1, 1]范围内
+        const sample = Math.max(-1, Math.min(1, inputData[i]));
+        // 转换为16位整数
+        pcmData[i] = sample < 0 ? Math.floor(sample * 0x8000) : Math.floor(sample * 0x7FFF);
+      }
+      
+      // 转换为字节数组（小端序）
+      const bytes = new Uint8Array(pcmData.buffer);
+      audioBuffer.push(...bytes);
+      
+      // 每200ms发送一次数据 (16000 * 2 * 0.2 = 6400 bytes)
+      // HTTP请求不适合太频繁，调整为200ms
+      if (audioBuffer.length >= 6400) {
+        const chunkData = new Uint8Array(audioBuffer.splice(0, 6400));
+        await sendAudioData(chunkData, false);
+      }
     };
+    
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+    
+    // console.log('✅ 流式录音已开始');
 
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(audioChunks, { type: mimeType });
-      audioBlob.value = blob;
-      audioChunks = [];
-
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64Audio = reader.result.split(",")[1];
-          const response = await axios.post("/api/speech-to-text", {
-            audioData: base64Audio,
-            mimeType: mimeType
-          }, {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (response.error) {
-            console.error('语音识别失败:', response.error);
-            return;
-          }
-
-          // 确保response.data是字符串类型
-          const recognizedText = typeof response.data === 'string' ? response.data : 
-                               response.data?.text || response.data?.transcription || 
-                               String(response.data);
-          
-          userInput.value = recognizedText;
-          if (recognizedText.trim()) {
-            await sendMessage();
-          }
-        } catch (error) {
-          console.error('处理音频时出错:', error);
-        }
-      };
-
-      reader.readAsDataURL(blob);
-    };
-
-    mediaRecorder.start();
   } catch (error) {
     console.error('启动录音失败:', error);
     isRecording.value = false;
@@ -440,14 +463,114 @@ const startRecording = async () => {
   }
 };
 
-const stopRecording = () => {
-  if (!mediaRecorder) {
-    console.error('mediaRecorder未初始化');
+const stopRecording = async () => {
+  if (!isRecording.value) return;
+  
+  // console.log('🛑 停止流式录音...');
+  isRecording.value = false;
+  
+  // 发送剩余的音频数据（如果有的话）
+  if (sttSessionId && processor) {
+    // 获取当前audioBuffer中的剩余数据
+    const audioBufferData = window.audioBufferData || [];
+    if (audioBufferData.length > 0) {
+      // console.log(`📤 发送剩余音频数据: ${audioBufferData.length} bytes`);
+      await sendAudioData(new Uint8Array(audioBufferData), false);
+      window.audioBufferData = [];
+    }
+    
+    // 发送结束标记
+    await sendAudioData(new Uint8Array(0), true);
+  }
+  
+  // 清理音频处理
+  if (processor) {
+    processor.disconnect();
+    processor = null;
+  }
+  
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  
+  // 停止音频流
+  if (window.currentAudioStream) {
+    window.currentAudioStream.getTracks().forEach(track => {
+      track.stop();
+      // console.log('🔇 停止音频轨道:', track.kind);
+    });
+    window.currentAudioStream = null;
+  }
+  
+  // 关闭STT会话
+  if (sttSessionId) {
+    try {
+      await axios.post("/api/speech-to-text-stream", {
+        action: 'close',
+        sessionId: sttSessionId
+      });
+    } catch (error) {
+      console.error('关闭STT会话失败:', error);
+    }
+    sttSessionId = null;
+  }
+};
+
+// 初始化STT会话
+const initSTTSession = async () => {
+  try {
+    // console.log('🔗 初始化流式STT会话...');
+    
+    const response = await axios.post("/api/speech-to-text-stream", {
+      action: 'init'
+    });
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'STT会话初始化失败');
+    }
+    
+    sttSessionId = response.data.sessionId;
+    // console.log('✅ STT会话初始化成功:', sttSessionId);
+    
+  } catch (error) {
+    console.error('初始化STT会话失败:', error);
+    throw error;
+  }
+};
+
+// 发送音频数据
+const sendAudioData = async (audioData, isLast) => {
+  if (!sttSessionId) {
+    console.warn('STT会话未初始化');
     return;
   }
-
-  isRecording.value = false;
-  mediaRecorder.stop();
+  
+  try {
+    const response = await axios.post("/api/speech-to-text-stream", {
+      action: 'sendAudio',
+      sessionId: sttSessionId,
+      audioData: Array.from(audioData),
+      isLast: isLast
+    });
+    
+    if (response.data.success) {
+      const result = response.data.result;
+      
+      if (result && result.trim()) {
+        // console.log('🎯 识别结果:', result);
+        userInput.value = result;
+        
+        // 如果是最后一包且有结果，自动发送消息
+        if (isLast && result !== "未识别到语音内容") {
+          await sendMessage();
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('发送音频数据失败:', error);
+  }
 };
 
 const downloadAudio = () => {
@@ -463,13 +586,8 @@ const downloadAudio = () => {
 };
 
 const getSupportedContentMimeType = () => {
-  return MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : MediaRecorder.isTypeSupported('audio/ogg')
-          ? 'audio/ogg'
-          : MediaRecorder.isTypeSupported('audio/mp4')
-              ? 'audio/mp4'
-              : null;
+  // 不再需要MediaRecorder的MIME类型检查，因为我们使用PCM格式
+  return 'audio/pcm';
 };
 
 /**
@@ -573,6 +691,32 @@ const goToHome = () => {
   console.log('回到主页');
   router.push('/');
 };
+
+// 组件销毁时清理
+onBeforeUnmount(async () => {
+  // 停止录音
+  if (isRecording.value) {
+    await stopRecording();
+  }
+  
+  // 停止音频流
+  if (window.currentAudioStream) {
+    window.currentAudioStream.getTracks().forEach(track => track.stop());
+    window.currentAudioStream = null;
+  }
+  
+  // 关闭STT会话
+  if (sttSessionId) {
+    try {
+      await axios.post("/api/speech-to-text-stream", {
+        action: 'close',
+        sessionId: sttSessionId
+      });
+    } catch (error) {
+      console.error('关闭STT会话失败:', error);
+    }
+  }
+});
 </script>
 
 <style scoped>
@@ -631,7 +775,29 @@ const goToHome = () => {
 }
 
 .btn-primary {
-  @apply h-10 min-w-[4.5rem] text-white px-4 rounded-xl flex items-center justify-center text-sm font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed;
+  height: 2.5rem;
+  min-width: 4.5rem;
+  color: white;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: scale(1.05);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .fade-enter-active,
@@ -672,5 +838,33 @@ const goToHome = () => {
 /* 输入框激活状态 */
 input:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 发送按钮样式 */
+.send-btn {
+  border: none;
+  cursor: pointer;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.send-btn:disabled {
+  background: #9ca3af;
+  transform: none;
+}
+
+/* 响应式输入框布局 */
+@media (max-width: 640px) {
+  .send-btn {
+    min-width: 2.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 </style>

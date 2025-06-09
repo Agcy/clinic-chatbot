@@ -495,7 +495,6 @@ const fetchScenes = async () => {
     const response = await axios.get('/api/scenes');
     if (response.data.success) {
       scenes.value = response.data.scenes;
-      console.log('获取到的场景列表:', scenes.value);
       
       // 检查每个场景的scene_description_charactor数据
       scenes.value.forEach((scene, index) => {

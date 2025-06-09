@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        console.log(`使用音色: ${character.voice} 为角色 ${characterName} 生成语音`);
+        // console.log(`使用音色: ${character.voice} 为角色 ${characterName} 生成语音`);
 
         // 创建临时文件路径
         const tempDir = path.join(process.cwd(), 'temp');
@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
         // 构建edge-tts命令
         const command = `edge-tts --voice "${character.voice}" --text "${text.replace(/"/g, '\\"')}" --write-media "${outputFile}" --rate=+10% --volume=+5% --pitch=-5Hz`;
         
-        console.log('执行TTS命令:', command);
+        // console.log('执行TTS命令:', command);
 
         // 执行edge-tts命令
         await execAsync(command, {
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
             console.error('清理临时文件失败:', cleanupError);
         }
 
-        console.log(`TTS生成成功，音频长度: ${audioBuffer.length} 字节`);
+        // console.log(`TTS生成成功，音频长度: ${audioBuffer.length} 字节`);
 
         return { 
             audioContent,

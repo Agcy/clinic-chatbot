@@ -82,7 +82,6 @@ onMounted(() => {
   try {
     currentScene.value = JSON.parse(sceneData);
     console.log('当前场景:', currentScene.value);
-    console.log('使用的配置ID:', sceneConfigId.value);
   } catch (error) {
     console.error('解析场景数据失败:', error);
     router.push('/');

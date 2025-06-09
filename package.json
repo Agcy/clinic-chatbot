@@ -32,7 +32,8 @@
     "three": "^0.173.0",
     "vue": "latest",
     "vue-router": "latest",
-    "web-speech-cognitive-services": "^8.1.1"
+    "web-speech-cognitive-services": "^8.1.1",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.13.1"
