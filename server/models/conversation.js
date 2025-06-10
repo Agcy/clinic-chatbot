@@ -43,6 +43,10 @@ const conversationSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  reasoning: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

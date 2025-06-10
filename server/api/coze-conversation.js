@@ -5,14 +5,14 @@
 import { defineEventHandler, readBody } from 'h3';
 import { Conversation } from '../models/conversation';
 import { connectDB, getConnectionStatus } from '../utils/db';
+import { setConversationId, getConversationId, clearConversationId } from '../utils/conversation-manager';
 
 // 扣子API配置
 const COZE_API_URL = 'https://api.coze.cn/v1/workflows/chat';
-const COZE_API_TOKEN = process.env.COZE_API_TOKEN || 'pat_088HrAHRNL6GWNyG4e0O4K17lDYI2K1D13x1GKolnAANEZDKMlbMm7NV7CLHNyR7';
-const WORKFLOW_ID = process.env.COZE_WORKFLOW_CONVERSATION_ID || '7512364746017407011';
+const COZE_API_TOKEN = process.env.COZE_API_TOKEN;
+const WORKFLOW_ID = process.env.COZE_WORKFLOW_CONVERSATION_ID;
 
-// 内存中存储用户对话ID的映射
-const userConversationMap = new Map();
+// conversation_id管理已移至 conversation-manager.js
 
 /**
  * 清理最终内容，去掉控制信息和格式化问题
@@ -48,7 +48,7 @@ function parseStreamResponse(streamText) {
     let finalContent = '';
     let isCompleted = false;
     
-    // console.log('开始解析流式响应，总行数:', lines.length);
+    console.log('🔄 开始解析流式响应，总行数:', lines.length);
     
     for (const line of lines) {
         const trimmedLine = line.trim();
@@ -69,11 +69,21 @@ function parseStreamResponse(streamText) {
             
             try {
                 const data = JSON.parse(dataContent);
-                // console.log('解析到的数据块:', data);
+                console.log('🔍 流式数据块:', data);
                 
-                // 提取conversation_id
+                // 增强的conversation_id提取逻辑
                 if (data.conversation_id) {
                     conversationId = data.conversation_id;
+                    console.log('🔍 从流式数据中找到conversation_id:', conversationId);
+                } else if (data.id && !conversationId) {
+                    conversationId = data.id;
+                    console.log('🔍 从流式数据的id字段找到:', conversationId);
+                } else if (data.chat_id && !conversationId) {
+                    conversationId = data.chat_id;
+                    console.log('🔍 从流式数据的chat_id字段找到:', conversationId);
+                } else if (data.session_id && !conversationId) {
+                    conversationId = data.session_id;
+                    console.log('🔍 从流式数据的session_id字段找到:', conversationId);
                 }
                 
                 // 只提取 type 为 'answer' 的内容，避免重复和控制信息
@@ -111,7 +121,7 @@ function parseStreamResponse(streamText) {
                 }
                 
             } catch (parseError) {
-                console.log('解析单行数据失败:', dataContent, parseError.message);
+                console.log('⚠️ 解析单行数据失败:', dataContent, parseError.message);
                 // 如果JSON解析失败，可能是纯文本内容
                 if (dataContent && !dataContent.startsWith('{')) {
                     finalContent += dataContent;
@@ -123,10 +133,9 @@ function parseStreamResponse(streamText) {
     // 最终内容清理
     finalContent = cleanFinalContent(finalContent);
     
-    // 只在有错误时输出日志
-    if (!finalContent && !conversationId) {
-        console.log('流式解析完成但没有获取到内容和conversation_id');
-    }
+    console.log('🔄 流式解析完成');
+    console.log('📋 提取到的conversation_id:', conversationId);
+    console.log('📝 提取到的内容长度:', finalContent.length);
     
     // 构建响应数据，模拟标准格式
     return {
@@ -149,9 +158,8 @@ export default defineEventHandler(async (event) => {
         if (body && body.action === 'clearHistory') {
             console.log('清除聊天历史请求');
             const { userId } = body;
-            if (userId && userConversationMap.has(userId)) {
-                userConversationMap.delete(userId);
-                console.log(`已清除用户 ${userId} 的conversation_id`);
+            if (userId) {
+                clearConversationId(userId);
             }
             return { success: true, message: '聊天历史已清除' };
         }
@@ -163,7 +171,7 @@ export default defineEventHandler(async (event) => {
 
     try {
         // 获取或创建用户的conversation_id
-        let conversationId = userConversationMap.get(userId);
+        let conversationId = getConversationId(userId);
         
         // 构建扣子API请求体
         const cozeRequestBody = {
@@ -178,7 +186,8 @@ export default defineEventHandler(async (event) => {
                     role: "user"
                 }
             ],
-            stream: false // 明确指定非流式输出
+            stream: false, // 明确指定非流式输出
+            temperature: 0.3 // 添加temperature参数控制输出的随机性
         };
 
         // 如果有conversation_id，添加到请求中
@@ -206,26 +215,86 @@ export default defineEventHandler(async (event) => {
 
         // 处理响应（自动检测JSON或流式）
         const rawResponseText = await response.text();
-        // console.log('扣子API原始响应:', rawResponseText.substring(0, 200) + '...');
+        console.log('🔍 扣子API原始响应前500字符:', rawResponseText.substring(0, 500));
 
         let responseData;
         try {
             // 尝试直接解析JSON
             responseData = JSON.parse(rawResponseText);
-            // console.log('成功解析为JSON响应');
+            console.log('✅ 成功解析为JSON响应');
         } catch (parseError) {
             // 如果是流式响应（Server-Sent Events格式），解析流式数据
-            // console.log('检测到流式响应，开始解析...');
+            console.log('🔄 检测到流式响应，开始解析...');
             responseData = parseStreamResponse(rawResponseText);
         }
         
-        // console.log('解析后的扣子API响应:', responseData);
+        console.log('📋 解析后的扣子API响应结构:', JSON.stringify(responseData, null, 2));
 
-        // 提取conversation_id并存储
-        if (responseData.conversation_id || responseData.data?.conversation_id) {
-            const newConversationId = responseData.conversation_id || responseData.data.conversation_id;
-            userConversationMap.set(userId, newConversationId);
-            // console.log(`已更新用户 ${userId} 的conversation_id: ${newConversationId}`);
+        // 提取conversation_id并存储 - 增强的提取逻辑
+        let newConversationId = null;
+        
+        // 尝试多种可能的conversation_id位置
+        if (responseData.conversation_id) {
+            newConversationId = responseData.conversation_id;
+            console.log('🔍 从responseData.conversation_id找到:', newConversationId);
+        } else if (responseData.data?.conversation_id) {
+            newConversationId = responseData.data.conversation_id;
+            console.log('🔍 从responseData.data.conversation_id找到:', newConversationId);
+        } else if (responseData.id) {
+            newConversationId = responseData.id;
+            console.log('🔍 从responseData.id找到:', newConversationId);
+        } else if (responseData.chat_id) {
+            newConversationId = responseData.chat_id;
+            console.log('🔍 从responseData.chat_id找到:', newConversationId);
+        } else if (responseData.session_id) {
+            newConversationId = responseData.session_id;
+            console.log('🔍 从responseData.session_id找到:', newConversationId);
+        } else {
+            // 如果以上都没有，尝试深度搜索
+            const searchForConversationId = (obj, path = '') => {
+                if (typeof obj !== 'object' || obj === null) return null;
+                
+                for (const [key, value] of Object.entries(obj)) {
+                    const currentPath = path ? `${path}.${key}` : key;
+                    
+                    // 检查key是否包含conversation相关的字样
+                    if (key.toLowerCase().includes('conversation') || 
+                        key.toLowerCase().includes('chat') || 
+                        key.toLowerCase().includes('session')) {
+                        console.log(`🔍 在 ${currentPath} 找到可能的conversation_id:`, value);
+                        if (typeof value === 'string' || typeof value === 'number') {
+                            return value;
+                        }
+                    }
+                    
+                    // 递归搜索
+                    if (typeof value === 'object') {
+                        const found = searchForConversationId(value, currentPath);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            
+            newConversationId = searchForConversationId(responseData);
+            if (newConversationId) {
+                console.log('🔍 通过深度搜索找到conversation_id:', newConversationId);
+            }
+        }
+        
+        if (newConversationId) {
+            setConversationId(userId, newConversationId);
+            console.log(`✅ 已更新用户 ${userId} 的conversation_id: ${newConversationId}`);
+        } else {
+            console.log('⚠️ 扣子API响应中未找到conversation_id');
+            console.log('🔍 响应数据的所有key:', Object.keys(responseData));
+            
+            // 如果是第一次对话且没有conversation_id，生成一个临时的
+            if (!conversationId) {
+                const tempConversationId = `temp_${userId}_${Date.now()}`;
+                setConversationId(userId, tempConversationId);
+                console.log(`🆔 生成临时conversation_id: ${tempConversationId}`);
+            }
         }
 
         // 处理扣子API的响应
@@ -272,19 +341,33 @@ export default defineEventHandler(async (event) => {
                     await connectDB();
                 }
 
+                // 获取当前的conversationId
+                const currentConversationId = getConversationId(userId);
+                
+                // 构建消息数组
+                const messagesArray = [
+                    {
+                        role: 'user',
+                        content: message,
+                        timestamp: new Date()
+                    },
+                    aiMessage
+                ];
+                
+                // 打印调试信息
+                console.log('=== 保存对话记录调试信息 ===');
+                console.log('userId:', userId);
+                console.log('scenarioId:', scenarioId);
+                console.log('conversationId:', currentConversationId);
+                console.log('messages内容:', JSON.stringify(messagesArray, null, 2));
+                console.log('================================');
+
                 // 构建对话记录
                 const conversationRecord = new Conversation({
-                    userId,
-                    scenarioId,
-                    conversationId: userConversationMap.get(userId),
-                    messages: [
-                        {
-                            role: 'user',
-                            content: message,
-                            timestamp: new Date()
-                        },
-                        aiMessage
-                    ]
+                    userId: userId,
+                    scenarioId: scenarioId, // 确保scenarioId正确保存（应该是scenes的scene_id字段值）
+                    conversationId: currentConversationId, // 确保conversationId正确保存（扣子API返回的conversation_id）
+                    messages: messagesArray
                 });
 
                 if (rating !== null) {
@@ -292,9 +375,10 @@ export default defineEventHandler(async (event) => {
                 }
 
                 await conversationRecord.save();
-                console.log('对话记录已保存到数据库');
+                console.log('✅ 对话记录已成功保存到数据库');
+                console.log('保存的记录ID:', conversationRecord._id);
             } catch (dbError) {
-                console.error('保存对话记录失败:', dbError);
+                console.error('❌ 保存对话记录失败:', dbError);
                 // 不中断主流程，只记录错误
             }
         }
@@ -303,7 +387,7 @@ export default defineEventHandler(async (event) => {
         return { 
             response: responseText,
             aiMessage: aiMessage,
-            conversationId: userConversationMap.get(userId),
+            conversationId: getConversationId(userId),
             conversationComplete: conversationComplete
         };
         

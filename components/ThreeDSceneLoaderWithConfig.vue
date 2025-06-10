@@ -546,7 +546,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  console.log('组件卸载，清理Three.js资源');
   
   // 停止动画循环
   stopAnimation();

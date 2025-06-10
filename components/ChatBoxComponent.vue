@@ -43,9 +43,30 @@
               <span class="ml-2 font-bold text-yellow-600">{{ evaluationRating }}/10</span>
             </div>
           </div>
-          <div class="evaluation-msg bg-white rounded-xl p-3 shadow-inner">
+          <div class="evaluation-msg bg-white rounded-xl p-3 shadow-inner mb-3">
             <p class="text-sm font-medium text-gray-700 mb-1">改進建議:</p>
             <p class="text-sm text-gray-600 leading-relaxed">{{ evaluationMsg }}</p>
+          </div>
+          <!-- 可折叠的评估理由框 -->
+          <div v-if="evaluationReasoning" class="reasoning-section">
+            <button 
+              @click="showReasoning = !showReasoning"
+              class="w-full text-left bg-blue-50/80 hover:bg-blue-100/80 rounded-lg p-2 transition-all duration-200 flex items-center justify-between text-sm font-medium text-blue-700"
+            >
+              <span>📋 評估詳細理由</span>
+              <svg 
+                :class="['w-4 h-4 transition-transform duration-200', showReasoning ? 'rotate-180' : '']"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div 
+              v-show="showReasoning" 
+              class="reasoning-content bg-white rounded-lg p-3 mt-2 shadow-inner border border-blue-100 text-xs text-gray-600 leading-relaxed max-h-48 overflow-y-auto"
+            >
+              <pre class="whitespace-pre-wrap font-mono">{{ evaluationReasoning }}</pre>
+            </div>
           </div>
         </div>
       </div>
@@ -153,6 +174,8 @@ const isEvaluating = ref(false);
 const showEvaluation = ref(false);
 const evaluationRating = ref(0);
 const evaluationMsg = ref("");
+const evaluationReasoning = ref(""); // 新增：评估理由
+const showReasoning = ref(false); // 控制理由框的展开/折叠
 const currentSceneId = ref(null);
 
 let mediaRecorder;
@@ -199,7 +222,7 @@ const initCurrentScene = () => {
       const sceneData = localStorage.getItem('currentScene');
       if (sceneData) {
         const scene = JSON.parse(sceneData);
-        currentSceneId.value = scene._id;
+        currentSceneId.value = scene.scene_id; // 使用scene_id字段，如 'vascular_tumor_001'
       }
     }
   } catch (error) {
@@ -275,13 +298,13 @@ const sendMessage = async () => {
           }
           
           // 检查场景是否变更
-          if (scene._id !== currentSceneId.value) {
+          if (scene.scene_id !== currentSceneId.value) {
             isNewScene = true;
             // 更新当前场景ID
-            currentSceneId.value = scene._id;
+            currentSceneId.value = scene.scene_id;
           }
           
-          sceneId = scene._id;
+          sceneId = scene.scene_id; // 使用scene_id字段，如 'vascular_tumor_001'
         } catch (error) {
           console.error('解析场景数据失败:', error);
         }
@@ -618,13 +641,13 @@ const evaluateConversation = async () => {
     const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
 
     // 获取当前场景ID（必须有效）
-    let sceneId = currentSceneId.value;
+    let sceneId = null;
     if (process.client) {
       try {
         const sceneData = localStorage.getItem('currentScene');
         if (sceneData) {
           const scene = JSON.parse(sceneData);
-          sceneId = scene._id;
+          sceneId = scene.scene_id; // 使用scene_id字段，如 'vascular_tumor_001'
         }
       } catch (error) {
         console.error('获取场景ID失败:', error);
@@ -635,6 +658,23 @@ const evaluateConversation = async () => {
       throw new Error('场景ID未找到，无法评估对话');
     }
 
+    // 获取当前场景的完整数据
+    let sceneData = null;
+    if (process.client) {
+      try {
+        const storedSceneData = localStorage.getItem('currentScene');
+        if (storedSceneData) {
+          sceneData = JSON.parse(storedSceneData);
+        }
+      } catch (error) {
+        console.error('获取场景数据失败:', error);
+      }
+    }
+
+    if (!sceneData) {
+      throw new Error('场景数据未找到，无法进行评估');
+    }
+
     // 准备对话数据
     const conversationData = {
       userId: 'default_user',  // 使用与其他API一致的用户ID
@@ -643,10 +683,16 @@ const evaluateConversation = async () => {
         role: msg.from === 'user' ? 'user' : 'assistant',
         content: msg.text,
         timestamp: new Date()
-      }))
+      })),
+      sceneData: sceneData  // 传递完整的场景数据
     };
 
     console.log('发送评估请求:', conversationData);
+    console.log('场景数据:', {
+      scene_id: sceneData.scene_id,
+      scene_description_model: sceneData.scene_description_model?.substring(0, 100) + '...',
+      scene_description_charactor: sceneData.scene_description_charactor?.substring(0, 100) + '...'
+    });
 
     // 调用评估API
     const response = await axios.post("/api/evaluate-conversation", conversationData);
@@ -664,9 +710,11 @@ const evaluateConversation = async () => {
     // 显示评估结果
     evaluationRating.value = response.data.rating;
     evaluationMsg.value = response.data.evaluation_msg;
+    evaluationReasoning.value = response.data.reasoning || ''; // 保存评估理由
     showEvaluation.value = true;
 
     console.log('评估成功，评分:', response.data.rating, '评估消息:', response.data.evaluation_msg);
+    console.log('评估理由:', response.data.reasoning?.substring(0, 100) + '...');
   } catch (error) {
     console.error('评估失败:', error);
     alert('對話評估失敗：' + error.message);
@@ -684,6 +732,8 @@ const resetTraining = async () => {
   showEvaluation.value = false;
   evaluationRating.value = 0;
   evaluationMsg.value = "";
+  evaluationReasoning.value = "";
+  showReasoning.value = false;
 };
 
 const goToHome = () => {
