@@ -172,7 +172,7 @@ export default defineEventHandler(async (event) => {
     try {
         // 获取或创建用户的conversation_id
         let conversationId = getConversationId(userId);
-        
+
         // 构建扣子API请求体
         const cozeRequestBody = {
             parameters: {
@@ -311,7 +311,7 @@ export default defineEventHandler(async (event) => {
             } else if (responseData.data.output) {
                 responseText = responseData.data.output;
             } else if (responseData.data.content) {
-                responseText = responseData.data.content;
+            responseText = responseData.data.content;
             }
             
             // 检查对话是否完成

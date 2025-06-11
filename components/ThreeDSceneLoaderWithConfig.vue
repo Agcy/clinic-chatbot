@@ -51,11 +51,14 @@ const getCharacterByUrl = async (characterUrl) => {
     const response = await $fetch('/api/characters');
     if (response.success) {
       const characters = response.data;
-      // 通过URL匹配角色，考虑不同的URL格式
+      // 通过URL或文件名匹配角色
       const character = characters.find(char => {
-        const charUrl = char.url.replace(/^\/public/, '').replace(/^\//, '');
-        const targetUrl = characterUrl.replace(/^\/public/, '').replace(/^\//, '');
-        return charUrl === targetUrl || char.url === characterUrl;
+        const normalize = (url) => url.replace(/^\/public/, '').replace(/^\//, '');
+        const charUrlNormalized = normalize(char.url);
+        const targetUrlNormalized = normalize(characterUrl);
+        const charFilename = charUrlNormalized.split('/').pop();
+        const targetFilename = targetUrlNormalized.split('/').pop();
+        return charUrlNormalized === targetUrlNormalized || char.url === characterUrl || charFilename === targetFilename;
       });
       
       if (character) {
@@ -254,6 +257,7 @@ const loadScene = async () => {
       dracoLoader.setDecoderPath('/draco/');
       loader.setDRACOLoader(dracoLoader);
       
+      // 直接使用COS公开URL加载
       const gltf = await loader.loadAsync(sceneModelConfig.url);
       sceneObj = gltf.scene;
     }
@@ -313,6 +317,7 @@ const loadCharacter = async () => {
       dracoLoader.setDecoderPath('/draco/');
       loader.setDRACOLoader(dracoLoader);
       
+      // 直接使用COS公开URL加载
       const gltf = await loader.loadAsync(characterModelConfig.url);
       characterObj = gltf.scene;
       animations = gltf.animations;

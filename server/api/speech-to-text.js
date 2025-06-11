@@ -64,7 +64,7 @@ function parseResponse(data) {
                     isLast: (flags & 0x02) !== 0,
                     data: JSON.parse(payloadData.toString('utf8'))
                 };
-            }
+    }
         }
         
         return null;

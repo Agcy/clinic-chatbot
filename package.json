@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "start": "nuxt start",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -12,8 +13,6 @@
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
-    "@google-cloud/speech": "^6.7.0",
-    "@google-cloud/text-to-speech": "^5.8.0",
     "@google/generative-ai": "^0.21.0",
     "@react-three/drei": "^9.121.5",
     "@react-three/fiber": "^8.17.14",
@@ -21,6 +20,7 @@
     "@tweenjs/tween.js": "^25.0.0",
     "@types/three": "^0.173.0",
     "axios": "^1.7.9",
+    "cos-nodejs-sdk-v5": "^2.16.0-beta.3",
     "dotenv": "^16.5.0",
     "edge-tts": "^1.0.1",
     "flowbite": "^3.1.2",
@@ -36,6 +36,6 @@
     "ws": "^8.18.2"
   },
   "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.13.1"
+    "@nuxtjs/tailwindcss": "^6.14.0"
   }
 }

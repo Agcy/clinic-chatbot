@@ -276,7 +276,7 @@ export default defineEventHandler(async (event) => {
       if (evaluation_msg === '评估完成') { // 如果还是默认值
         evaluation_msg = stringResult.substring(0, 200) || '评估完成';
         console.log('📝 使用截断的评估消息');
-      }
+    }
     }
 
     // 确保评分在有效范围内
@@ -308,7 +308,7 @@ export default defineEventHandler(async (event) => {
         reasoning: reasoning, // 新增：保存评估理由
         createdAt: new Date()
       });
-
+      
       await conversation.save();
       console.log('✅ 评估结果已成功保存到数据库');
       console.log('保存的记录ID:', conversation._id);
@@ -325,7 +325,7 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('扣子评估对话失败:', error);
-
+    
     return {
       success: false,
       error: error.message || '服务器内部错误'

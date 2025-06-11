@@ -1,6 +1,9 @@
 /**
  * 从JSON文件加载场景数据
  */
+import { getModelUrl } from '../utils/cos-url';
+import { H3Error } from 'h3';
+
 export default defineEventHandler(async (event) => {
   try {
     // 获取查询参数
@@ -52,26 +55,30 @@ export default defineEventHandler(async (event) => {
       });
     }
     
+    // 将本地路径转换为COS URL
+    const sceneUrl = sceneData.scene_url_3d ? getModelUrl(sceneData.scene_url_3d.replace('/model/', '')) : '';
+    const characterUrl = sceneData.charactor_url_3d ? getModelUrl(sceneData.charactor_url_3d.replace('/model/', '')) : getModelUrl('doctor.glb');
+    
     console.log('从JSON文件中找到场景数据:', {
       sceneId: sceneData.scene_id,
-      sceneUrl: sceneData.scene_url_3d,
-      characterUrl: sceneData.charactor_url_3d
+      sceneUrl,
+      characterUrl
     });
     
     // 返回场景数据
     return {
-      sceneUrl: sceneData.scene_url_3d || '',
-      characterUrl: sceneData.charactor_url_3d || '/model/doctor.glb',
+      sceneUrl,
+      characterUrl,
       sceneId: sceneData.scene_id,
       sceneTitle: sceneData.scene_title,
       modelCharactor: sceneData.model_charactor,
       traineeCharacter: sceneData.trainee_character
     };
-  } catch (error: any) {
-    console.error('从JSON文件加载场景数据失败:', error);
+  } catch (error: unknown) {
+    console.error('加载场景数据失败:', error);
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || '从JSON文件加载场景数据失败'
+      statusCode: 500,
+      message: `加载场景数据失败: ${error instanceof Error ? error.message : '未知错误'}`
     });
   }
 }); 

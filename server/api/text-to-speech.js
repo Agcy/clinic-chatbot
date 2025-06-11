@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
         // 创建临时文件路径
         const tempDir = path.join(process.cwd(), 'temp');
         await fs.mkdir(tempDir, { recursive: true });
-        
+
         const timestamp = Date.now();
         const outputFile = path.join(tempDir, `tts_${timestamp}.mp3`);
 

@@ -349,13 +349,13 @@ const sendMessage = async () => {
         throw new Error(speechResponse.data.error || '语音生成失败');
       }
 
-      const audioContent = speechResponse.data.audioContent;
+    const audioContent = speechResponse.data.audioContent;
       // console.log(`语音生成完成，使用音色: ${speechResponse.data.voice}`);
 
       // 创建音频对象
-      const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+    const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
       
         // 监听音频开始播放，启动说话动画
         audio.addEventListener('play', () => {
@@ -394,7 +394,7 @@ const sendMessage = async () => {
 
         // 开始播放音频（此时会触发play事件，启动动画）
         // console.log('准备播放语音...');
-        audio.play();
+    audio.play();
     } catch (ttsError) {
       console.error('TTS处理失败:', ttsError);
       // TTS失败时不需要停止动画，因为动画还没开始
@@ -471,7 +471,7 @@ const startRecording = async () => {
       if (audioBuffer.length >= 6400) {
         const chunkData = new Uint8Array(audioBuffer.splice(0, 6400));
         await sendAudioData(chunkData, false);
-      }
+          }
     };
     
     source.connect(processor);
@@ -568,7 +568,7 @@ const sendAudioData = async (audioData, isLast) => {
     console.warn('STT会话未初始化');
     return;
   }
-  
+
   try {
     const response = await axios.post("/api/speech-to-text-stream", {
       action: 'sendAudio',
