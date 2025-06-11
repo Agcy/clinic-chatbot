@@ -4,9 +4,9 @@
 
 <template>
   <div class="chat-box fixed right-0 top-0 bottom-0 p-4 flex items-center">
-    <div class="w-[400px] h-[80vh] rounded-2xl shadow-2xl overflow-visible bg-gradient-to-b from-black/20 to-black/30 backdrop-blur-sm border border-white/20">
+    <div class="w-[400px] h-[80vh] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-black/20 to-black/30 backdrop-blur-sm border border-white/20 flex flex-col">
       <!-- 消息容器 -->
-              <div class="messages-container h-[60vh] overflow-y-auto p-4 mb-2 rounded-t-2xl">
+              <div class="messages-container flex-1 overflow-y-auto p-4 mb-2 rounded-t-2xl">
         <transition-group name="fade" tag="div" class="space-y-4">
           <div
               v-for="(msg, index) in messages"
@@ -72,20 +72,24 @@
       </div>
 
       <!-- 输入区域 -->
-      <div class="p-4 pt-2 pb-4 border-t border-gray-200/50">
+      <div class="flex-shrink-0 p-4 pt-2 pb-4 border-t border-gray-200/50">
         <form @submit.prevent="sendMessage" class="space-y-3">
           <div class="relative flex gap-2">
-            <input
+            <textarea
                 v-model="userInput"
-                type="text"
+                ref="textareaRef"
                 placeholder="输入消息..."
-                class="flex-1 px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm"
+                class="flex-1 px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm resize-none min-h-[3rem]"
                 :disabled="trainingFinished"
-            />
+                @input="adjustTextareaHeight"
+                @keydown.enter.exact.prevent="sendMessage"
+                @keydown.enter.shift.exact="insertNewline"
+                rows="1"
+            ></textarea>
             <button
                 type="submit"
                 :disabled="!userInput.trim() || trainingFinished"
-                class="send-btn bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem] group"
+                class="send-btn bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem] h-12 group"
                 title="发送消息 (Enter)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5">
@@ -93,30 +97,36 @@
               </svg>
             </button>
           </div>
-          <div class="flex flex-wrap justify-center gap-3">
+          <div class="flex justify-center gap-3">
             <!-- 训练中按钮组 -->
             <template v-if="!trainingFinished">
               <button
                   type="button"
-                  @click="startRecording"
-                  :disabled="isRecording"
-                  class="btn-primary bg-gradient-to-r from-green-500 to-green-600"
+                  @mousedown="startPressToTalk"
+                  @mouseup="stopPressToTalk"
+                  @mouseleave="stopPressToTalk"
+                  @touchstart.prevent="startPressToTalk"
+                  @touchend.prevent="stopPressToTalk"
+                  :class="[
+                    'voice-btn relative overflow-hidden h-14 flex-1 min-w-[8rem]',
+                    isRecording ? 'voice-btn-recording' : 'voice-btn-normal'
+                  ]"
+                  :disabled="trainingFinished"
               >
-                🎤 {{ isRecording ? "录音中" : "语音" }}
-              </button>
-              <button
-                  type="button"
-                  @click="stopRecording"
-                  :disabled="!isRecording"
-                  class="btn-primary bg-gradient-to-r from-red-500 to-red-600"
-              >
-                🛑 停止
+                <div class="voice-btn-content">
+                  <div class="voice-icon">🎤</div>
+                  <span class="voice-text">{{ isRecording ? "正在录音..." : "按住说话" }}</span>
+                </div>
+                
+                <!-- 录音时的波纹效果 -->
+                <div v-if="isRecording" class="voice-ripple"></div>
+                <div v-if="isRecording" class="voice-ripple voice-ripple-delay"></div>
               </button>
               <button
                   type="button"
                   @click="finishTraining"
                   :disabled="isEvaluating || messages.length === 0"
-                  class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600"
+                  class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600 h-14 flex-1 min-w-[8rem]"
               >
                 ✓ 完成训练
               </button>
@@ -124,31 +134,32 @@
             
             <!-- 训练后按钮组 -->
             <template v-else>
-              <button
-                  v-if="!showEvaluation"
-                  type="button"
-                  @click="evaluateConversation"
-                  :disabled="isEvaluating"
-                  class="btn-primary bg-gradient-to-r from-blue-500 to-blue-600"
-              >
-                📝 {{ isEvaluating ? "評估中" : "評估" }}
-              </button>
-              <button
-                  v-else
-                  type="button"
-                  @click="resetTraining"
-                  class="btn-primary bg-gradient-to-r from-green-500 to-green-600 mr-2"
-              >
-                🔄 再次訓練
-              </button>
-              <button
-                  v-if="showEvaluation"
-                  type="button"
-                  @click="goToHome"
-                  class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600"
-              >
-                🏠 回到主頁
-              </button>
+              <div v-if="!showEvaluation" class="flex gap-3 w-full">
+                <button
+                    type="button"
+                    @click="evaluateConversation"
+                    :disabled="isEvaluating"
+                    class="btn-primary bg-gradient-to-r from-blue-500 to-blue-600 h-14 flex-1 min-w-[8rem]"
+                >
+                  📝 {{ isEvaluating ? "評估中" : "評估" }}
+                </button>
+              </div>
+              <div v-else class="flex gap-3 w-full">
+                <button
+                    type="button"
+                    @click="resetTraining"
+                    class="btn-primary bg-gradient-to-r from-green-500 to-green-600 h-14 flex-1 min-w-[7rem]"
+                >
+                  🔄 再次訓練
+                </button>
+                <button
+                    type="button"
+                    @click="goToHome"
+                    class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600 h-14 flex-1 min-w-[7rem]"
+                >
+                  🏠 回到主頁
+                </button>
+              </div>
             </template>
           </div>
         </form>
@@ -167,6 +178,7 @@ const route = useRoute();
 
 const messages = ref([]);
 const userInput = ref("");
+const textareaRef = ref(null);
 const isRecording = ref(false);
 const audioBlob = ref(null);
 const trainingFinished = ref(false);
@@ -248,6 +260,10 @@ onMounted(() => {
   try {
     // 初始化当前场景ID
     initCurrentScene();
+    // 初始化textarea高度
+    nextTick(() => {
+      adjustTextareaHeight();
+    });
   } catch (error) {
     console.error('组件挂载时出错:', error);
   }
@@ -281,6 +297,11 @@ const sendMessage = async () => {
 
   messages.value.push(newMessage);
   userInput.value = "";
+
+  // 重置textarea高度
+  nextTick(() => {
+    adjustTextareaHeight();
+  });
 
   try {
     // 从localStorage获取当前场景信息
@@ -402,6 +423,36 @@ const sendMessage = async () => {
   } catch (error) {
     console.error('Error sending message:', error);
     alert('發送消息失敗：' + error.message);
+  }
+};
+
+// 按住说话 - 开始
+const startPressToTalk = async (event) => {
+  if (trainingFinished.value || isRecording.value) return;
+  
+  // 防止默认行为和事件冒泡
+  event.preventDefault();
+  event.stopPropagation();
+  
+  try {
+    await startRecording();
+  } catch (error) {
+    console.error('开始录音失败:', error);
+  }
+};
+
+// 按住说话 - 结束
+const stopPressToTalk = async (event) => {
+  if (trainingFinished.value || !isRecording.value) return;
+  
+  // 防止默认行为和事件冒泡
+  event.preventDefault();
+  event.stopPropagation();
+  
+  try {
+    await stopRecording();
+  } catch (error) {
+    console.error('停止录音失败:', error);
   }
 };
 
@@ -584,10 +635,7 @@ const sendAudioData = async (audioData, isLast) => {
         // console.log('🎯 识别结果:', result);
         userInput.value = result;
         
-        // 如果是最后一包且有结果，自动发送消息
-        if (isLast && result !== "未识别到语音内容") {
-          await sendMessage();
-        }
+        // 只显示在文本框中，不自动发送
       }
     }
     
@@ -767,6 +815,55 @@ onBeforeUnmount(async () => {
     }
   }
 });
+
+// 自动调整textarea高度
+const adjustTextareaHeight = () => {
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+  
+  // 重置高度以获取正确的scrollHeight
+  textarea.style.height = 'auto';
+  textarea.style.overflowY = 'hidden';
+  
+  // 计算行高和最大行数
+  const lineHeight = 24; // 1.5 * 16px (text-sm的line-height)
+  const padding = 24; // 上下padding各12px
+  const minHeight = 48;  // 对应 min-h-[3rem] (3rem = 48px)
+  const maxLines = 3;
+  const maxHeight = padding + (lineHeight * maxLines); // 96px for 3 lines
+  
+  // 计算所需高度
+  const scrollHeight = textarea.scrollHeight;
+  const newHeight = Math.max(minHeight, scrollHeight);
+  
+  if (newHeight <= maxHeight) {
+    // 在最大行数内，自动调整高度，不显示滚动条
+    textarea.style.height = newHeight + 'px';
+    textarea.style.overflowY = 'hidden';
+  } else {
+    // 超过最大行数，固定高度并显示滚动条
+    textarea.style.height = maxHeight + 'px';
+    textarea.style.overflowY = 'auto';
+  }
+};
+
+// 插入换行符（Shift+Enter）
+const insertNewline = () => {
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+  
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const value = userInput.value;
+  
+  userInput.value = value.substring(0, start) + '\n' + value.substring(end);
+  
+  // 下一帧设置光标位置和调整高度
+  nextTick(() => {
+    textarea.selectionStart = textarea.selectionEnd = start + 1;
+    adjustTextareaHeight();
+  });
+};
 </script>
 
 <style scoped>
@@ -825,7 +922,7 @@ onBeforeUnmount(async () => {
 }
 
 .btn-primary {
-  height: 2.5rem;
+  /* height由h-14类控制，与语音按钮保持一致 */
   min-width: 4.5rem;
   color: white;
   padding-left: 1rem;
@@ -909,6 +1006,121 @@ input:focus {
   transform: none;
 }
 
+/* 语音按钮样式 */
+.voice-btn {
+  position: relative;
+  /* height由h-14类控制，确保与其他按钮一致 */
+  border: none;
+  border-radius: 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.voice-btn-normal {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
+}
+
+.voice-btn-normal:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
+  transform: translateY(-1px);
+}
+
+.voice-btn-normal:active {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 8px 25px 0 rgba(16, 185, 129, 0.8);
+}
+
+.voice-btn-recording {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  transform: scale(1.15);
+  box-shadow: 0 8px 30px 0 rgba(239, 68, 68, 0.7);
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+.voice-btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.voice-icon {
+  font-size: 1.25rem;
+  display: block;
+  line-height: 1;
+}
+
+.voice-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.9;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* 波纹效果 */
+.voice-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 2s linear infinite;
+  z-index: 1;
+}
+
+.voice-ripple-delay {
+  animation-delay: 1s;
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 8px 30px 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 12px 40px 0 rgba(239, 68, 68, 0.9);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* 禁用状态 */
+.voice-btn:disabled {
+  background: #9ca3af !important;
+  transform: none !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.voice-btn:disabled .voice-ripple {
+  display: none;
+}
+
 /* 响应式输入框布局 */
 @media (max-width: 640px) {
   .send-btn {
@@ -916,5 +1128,61 @@ input:focus {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
+  
+  .voice-btn {
+    /* height由h-14类控制 */
+  }
+  
+  .voice-icon {
+    font-size: 1.1rem;
+  }
+  
+  .voice-text {
+    font-size: 0.7rem;
+  }
+  
+  textarea {
+    font-size: 0.875rem;
+  }
+  
+  .chat-box > div {
+    width: 100%;
+    height: 70vh;
+  }
+}
+
+/* Textarea样式增强 */
+textarea {
+  line-height: 1.5;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  transition: height 0.15s ease-out;
+}
+
+textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+textarea:focus::placeholder {
+  opacity: 0.5;
+}
+
+/* 自定义滚动条样式 */
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
 }
 </style>

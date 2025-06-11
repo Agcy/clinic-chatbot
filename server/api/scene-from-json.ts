@@ -2,7 +2,6 @@
  * 从JSON文件加载场景数据
  */
 import { getModelUrl } from '../utils/cos-url';
-import { H3Error } from 'h3';
 
 export default defineEventHandler(async (event) => {
   try {
