@@ -1,12 +1,12 @@
 /**
- * @fileoverview 聊天框组件 - 使用扣子(Coze)工作流API
+ * @fileoverview 聊天框组件 - 使用扣子(Coze)工作流API，包含SBAR雷达图评估
  */
 
 <template>
   <div class="chat-box fixed right-0 top-0 bottom-0 p-4 flex items-center">
     <div class="w-[400px] h-[80vh] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-black/20 to-black/30 backdrop-blur-sm border border-white/20 flex flex-col">
       <!-- 消息容器 -->
-              <div class="messages-container flex-1 overflow-y-auto p-4 mb-2 rounded-t-2xl">
+      <div class="messages-container flex-1 overflow-y-auto p-4 mb-2 rounded-t-2xl">
         <transition-group name="fade" tag="div" class="space-y-4">
           <div
               v-for="(msg, index) in messages"
@@ -28,9 +28,11 @@
         
         <!-- 评估结果显示区域 -->
         <div v-if="showEvaluation" class="evaluation-results bg-gradient-to-r from-yellow-50/80 to-orange-50/80 text-gray-800 rounded-xl p-3 my-3 border border-yellow-200/50 shadow-lg backdrop-blur-sm">
-          <h3 class="text-lg font-bold mb-3 text-yellow-700">訓練評估結果</h3>
+          <h3 class="text-lg font-bold mb-3 text-yellow-700">🎯 SBAR 訓練評估結果</h3>
+          
+          <!-- 总体评分 -->
           <div class="rating flex items-center mb-3">
-            <span class="mr-2 font-medium">評分:</span>
+            <span class="mr-2 font-medium">總體評分:</span>
             <div class="rating-stars flex items-center bg-white px-3 py-1 rounded-full shadow-sm">
               <span 
                 v-for="i in 10" 
@@ -43,17 +45,92 @@
               <span class="ml-2 font-bold text-yellow-600">{{ evaluationRating }}/10</span>
             </div>
           </div>
+          
+          <!-- 总体改进建议 -->
           <div class="evaluation-msg bg-white rounded-xl p-3 shadow-inner mb-3">
             <p class="text-sm font-medium text-gray-700 mb-1">改進建議:</p>
             <p class="text-sm text-gray-600 leading-relaxed">{{ evaluationMsg }}</p>
           </div>
-          <!-- 可折叠的评估理由框 -->
+          
+          <!-- SBAR雷达图 -->
+          <div v-if="sbarScores" class="sbar-radar-section bg-white rounded-xl p-4 shadow-inner mb-3">
+            <h4 class="text-md font-bold mb-3 text-center text-gray-700">📊 SBAR 能力雷達圖</h4>
+            
+            <!-- 雷达图容器 -->
+            <div class="radar-chart-container relative mb-4">
+              <canvas ref="radarChartRef" width="300" height="300"></canvas>
+            </div>
+            
+            <!-- SBAR维度说明 -->
+            <div class="sbar-legend text-xs text-gray-600 mb-3">
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex items-center">
+                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  <span><strong>S</strong> - 情況描述</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  <span><strong>B</strong> - 背景收集</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  <span><strong>A</strong> - 評估分析</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  <span><strong>R</strong> - 建議方案</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- SBAR详细评分 -->
+            <div class="sbar-details space-y-2">
+              <div 
+                v-for="(dimension, key) in sbarScores" 
+                :key="key"
+                class="sbar-item bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                @click="toggleSbarDetail(key)"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="font-bold text-blue-600 mr-2">{{ getSbarLabel(key) }}</span>
+                    <span class="text-sm text-gray-600">{{ getSbarFullName(key) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold text-lg mr-2" :class="getSbarScoreColor(dimension.rank)">
+                      {{ dimension.rank }}/10
+                    </span>
+                    <svg 
+                      :class="['w-4 h-4 transition-transform duration-200', expandedSbarItems.includes(key) ? 'rotate-180' : '']"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- 展开的详细信息 -->
+                <div v-show="expandedSbarItems.includes(key)" class="mt-3 pt-3 border-t border-gray-200">
+                  <div class="mb-2">
+                    <p class="text-xs font-medium text-gray-700 mb-1">💡 改進建議:</p>
+                    <p class="text-xs text-gray-600 leading-relaxed">{{ dimension.message }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-medium text-gray-700 mb-1">📝 評估理由:</p>
+                    <p class="text-xs text-gray-500 leading-relaxed italic">{{ dimension.reason }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 可折叠的总体评估理由框 -->
           <div v-if="evaluationReasoning" class="reasoning-section">
             <button 
               @click="showReasoning = !showReasoning"
               class="w-full text-left bg-blue-50/80 hover:bg-blue-100/80 rounded-lg p-2 transition-all duration-200 flex items-center justify-between text-sm font-medium text-blue-700"
             >
-              <span>📋 評估詳細理由</span>
+              <span>📋 總體評估詳細理由</span>
               <svg 
                 :class="['w-4 h-4 transition-transform duration-200', showReasoning ? 'rotate-180' : '']"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -141,7 +218,7 @@
                     :disabled="isEvaluating"
                     class="btn-primary bg-gradient-to-r from-blue-500 to-blue-600 h-14 flex-1 min-w-[8rem]"
                 >
-                  📝 {{ isEvaluating ? "評估中" : "評估" }}
+                  📊 {{ isEvaluating ? "SBAR評估中..." : "SBAR評估" }}
                 </button>
               </div>
               <div v-else class="flex gap-3 w-full">
@@ -151,6 +228,13 @@
                     class="btn-primary bg-gradient-to-r from-green-500 to-green-600 h-14 flex-1 min-w-[7rem]"
                 >
                   🔄 再次訓練
+                </button>
+                <button
+                    type="button"
+                    @click="generatePDFReport"
+                    class="btn-primary bg-gradient-to-r from-orange-500 to-orange-600 h-14 flex-1 min-w-[7rem]"
+                >
+                  📄 下載PDF
                 </button>
                 <button
                     type="button"
@@ -166,6 +250,62 @@
       </div>
     </div>
   </div>
+
+  <!-- PDF预览内容（隐藏，用于html2canvas） -->
+  <div id="pdf-content" ref="pdfContentRef" class="pdf-preview">
+    <div class="pdf-title">SBAR 醫療對話評估報告</div>
+    
+    <div class="pdf-info">
+      <div><strong>場景名稱:</strong> {{ getCurrentSceneName() }}</div>
+      <div v-if="getCurrentSceneDescription()"><strong>場景描述:</strong> {{ getCurrentSceneDescription() }}</div>
+      <div><strong>生成時間:</strong> <span id="generation-time">{{ getCurrentDateTime() }}</span></div>
+    </div>
+
+    <div class="pdf-section">
+      <div class="pdf-section-title">📊 總體評估結果</div>
+      <div class="pdf-score">評分: {{ evaluationRating }}/10</div>
+      <div><strong>改進建議:</strong></div>
+      <div>{{ evaluationMsg }}</div>
+    </div>
+
+    <div v-if="sbarScores" class="pdf-section">
+      <div class="pdf-section-title">🎯 SBAR 各維度詳細評估</div>
+      
+      <div 
+        v-for="(dimension, key) in sbarScores" 
+        :key="key"
+        class="sbar-dimension"
+      >
+        <div class="sbar-dimension-title">{{ getSbarLabel(key) }} - {{ getSbarFullName(key) }}</div>
+        <div class="sbar-score" :style="{ color: getSbarScoreColorHex(dimension.rank) }">評分: {{ dimension.rank }}/10</div>
+        <div class="sbar-suggestion"><strong>💡 改進建議:</strong> {{ dimension.message }}</div>
+        <div class="sbar-reason"><strong>📝 評估理由:</strong> {{ dimension.reason }}</div>
+      </div>
+    </div>
+
+    <div v-if="evaluationReasoning" class="pdf-section">
+      <div class="pdf-section-title">📋 總體評估詳細理由</div>
+      <div class="pdf-reasoning">{{ evaluationReasoning }}</div>
+    </div>
+
+    <div v-if="getValidMessages().length > 0" class="pdf-section">
+      <div class="pdf-section-title">💬 對話記錄</div>
+      
+      <div 
+        v-for="(msg, index) in getValidMessages()" 
+        :key="index"
+        class="conversation-item"
+        :class="msg.from === 'user' ? 'conversation-user' : 'conversation-ai'"
+      >
+        <div class="conversation-role">{{ msg.from === 'user' ? '👤 醫生:' : '🤖 病人:' }}</div>
+        <div>{{ msg.text }}</div>
+      </div>
+    </div>
+
+    <div class="pdf-footer">
+      SBAR 醫療對話訓練系統 - 專業醫療溝通能力評估平台
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -173,12 +313,38 @@ import { ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 
+// 动态导入PDF相关库
+let jsPDF = null;
+let html2canvas = null;
+
+// 动态加载PDF库
+const loadPDFLibraries = async () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const jsPDFModule = await import('jspdf');
+      jsPDF = jsPDFModule.jsPDF;
+      
+      const html2canvasModule = await import('html2canvas');
+      html2canvas = html2canvasModule.default;
+      
+      console.log('✅ PDF库加载成功');
+      return true;
+    } catch (error) {
+      console.error('❌ PDF库加载失败:', error);
+      return false;
+    }
+  }
+  return false;
+};
+
 const router = useRouter();
 const route = useRoute();
 
 const messages = ref([]);
 const userInput = ref("");
 const textareaRef = ref(null);
+const radarChartRef = ref(null); // 雷达图canvas引用
+const pdfContentRef = ref(null); // PDF内容引用
 const isRecording = ref(false);
 const audioBlob = ref(null);
 const trainingFinished = ref(false);
@@ -186,8 +352,10 @@ const isEvaluating = ref(false);
 const showEvaluation = ref(false);
 const evaluationRating = ref(0);
 const evaluationMsg = ref("");
-const evaluationReasoning = ref(""); // 新增：评估理由
+const evaluationReasoning = ref(""); // 评估理由
 const showReasoning = ref(false); // 控制理由框的展开/折叠
+const sbarScores = ref(null); // SBAR各维度评分
+const expandedSbarItems = ref([]); // 展开的SBAR项目
 const currentSceneId = ref(null);
 
 let mediaRecorder;
@@ -195,6 +363,251 @@ let audioChunks = [];
 let sttSessionId = null;
 let audioContext = null;
 let processor = null;
+let radarChart = null; // Chart.js实例
+
+// 动态加载Chart.js
+const loadChartJS = async () => {
+  if (typeof Chart !== 'undefined') {
+    return; // 已经加载
+  }
+  
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+// SBAR相关辅助函数
+const getSbarLabel = (key) => {
+  const labels = {
+    'Situation': 'S',
+    'Background': 'B',
+    'Assessment': 'A',
+    'Recommendation': 'R'
+  };
+  return labels[key] || key;
+};
+
+const getSbarFullName = (key) => {
+  const names = {
+    'Situation': '情況描述',
+    'Background': '背景收集',
+    'Assessment': '評估分析',
+    'Recommendation': '建議方案'
+  };
+  return names[key] || key;
+};
+
+const getSbarScoreColor = (score) => {
+  if (score >= 8) return 'text-green-600';
+  if (score >= 6) return 'text-yellow-600';
+  if (score >= 4) return 'text-orange-600';
+  return 'text-red-600';
+};
+
+// 获取SBAR评分颜色的十六进制值（用于PDF）
+const getSbarScoreColorHex = (score) => {
+  if (score >= 8) return '#16a34a'; // green-600
+  if (score >= 6) return '#ca8a04'; // yellow-600
+  if (score >= 4) return '#ea580c'; // orange-600
+  return '#dc2626'; // red-600
+};
+
+// 获取当前场景名称
+const getCurrentSceneName = () => {
+  if (process.client) {
+    try {
+      const sceneData = localStorage.getItem('currentScene');
+      if (sceneData) {
+        const scene = JSON.parse(sceneData);
+        return scene.scene_name || '醫療對話訓練';
+      }
+    } catch (error) {
+      console.error('獲取場景名稱失敗:', error);
+    }
+  }
+  return '醫療對話訓練';
+};
+
+// 获取当前场景描述
+const getCurrentSceneDescription = () => {
+  if (process.client) {
+    try {
+      const sceneData = localStorage.getItem('currentScene');
+      if (sceneData) {
+        const scene = JSON.parse(sceneData);
+        return scene.scene_description || '';
+      }
+    } catch (error) {
+      console.error('獲取場景描述失敗:', error);
+    }
+  }
+  return '';
+};
+
+// 获取当前日期时间
+const getCurrentDateTime = () => {
+  const now = new Date();
+  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+};
+
+// 获取有效的消息列表
+const getValidMessages = () => {
+  return messages.value.filter(msg => 
+    msg.text !== "Error: Failed to send message." && 
+    !msg.text.includes("正在進行 SBAR 評估分析")
+  );
+};
+
+const toggleSbarDetail = (key) => {
+  const index = expandedSbarItems.value.indexOf(key);
+  if (index > -1) {
+    expandedSbarItems.value.splice(index, 1);
+  } else {
+    expandedSbarItems.value.push(key);
+  }
+};
+
+// 初始化雷达图
+const initRadarChart = async () => {
+  console.log('🎯 initRadarChart 函数开始执行...');
+  console.log('📊 radarChartRef.value:', radarChartRef.value);
+  console.log('📊 sbarScores.value:', sbarScores.value);
+  
+  if (!radarChartRef.value || !sbarScores.value) {
+    console.log('❌ 雷达图初始化失败：缺少必要条件');
+    console.log('- radarChartRef.value 存在:', !!radarChartRef.value);
+    console.log('- sbarScores.value 存在:', !!sbarScores.value);
+    return;
+  }
+  
+  try {
+    console.log('📦 开始加载Chart.js...');
+    await loadChartJS();
+    console.log('✅ Chart.js加载完成');
+    
+    const ctx = radarChartRef.value.getContext('2d');
+    console.log('🎨 获取Canvas上下文:', !!ctx);
+    
+    // 如果已存在图表，先销毁
+    if (radarChart) {
+      console.log('🗑️ 销毁现有雷达图...');
+      radarChart.destroy();
+    }
+    
+    const scores = [
+      sbarScores.value.Situation?.rank || 0,
+      sbarScores.value.Background?.rank || 0,
+      sbarScores.value.Assessment?.rank || 0,
+      sbarScores.value.Recommendation?.rank || 0
+    ];
+    
+    console.log('📊 提取的SBAR评分:', scores);
+    console.log('📊 SBAR数据详情:', {
+      Situation: sbarScores.value.Situation,
+      Background: sbarScores.value.Background,
+      Assessment: sbarScores.value.Assessment,
+      Recommendation: sbarScores.value.Recommendation
+    });
+    
+    console.log('🎨 开始创建Chart.js雷达图...');
+    radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['S', 'B', 'A', 'R'],
+        datasets: [{
+          label: 'SBAR 評分',
+          data: scores,
+          borderColor: 'rgb(74, 144, 226)',
+          backgroundColor: 'rgba(74, 144, 226, 0.2)',
+          borderWidth: 3,
+          pointBackgroundColor: 'rgb(74, 144, 226)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointHoverBackgroundColor: 'rgb(49, 130, 206)',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 3,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              title: function(context) {
+                const labelMap = {
+                  'S': 'Situation (情況描述)',
+                  'B': 'Background (背景收集)',
+                  'A': 'Assessment (評估分析)',
+                  'R': 'Recommendation (建議方案)'
+                };
+                return labelMap[context[0].label] || context[0].label;
+              },
+              label: function(context) {
+                const score = context.raw;
+                return `評分: ${score}/10`;
+              }
+            },
+            displayColors: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: 'rgba(74, 144, 226, 0.8)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 12
+          }
+        },
+        scales: {
+          r: {
+            beginAtZero: true,
+            min: 0,
+            max: 10,
+            ticks: {
+              stepSize: 2,
+              color: '#718096',
+              font: {
+                size: 10
+              }
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.1)',
+              lineWidth: 1
+            },
+            angleLines: {
+              color: 'rgba(0, 0, 0, 0.1)',
+              lineWidth: 1
+            },
+            pointLabels: {
+              display: true,
+              padding: 15,
+              font: {
+                size: 12,
+                weight: 'bold'
+              },
+              color: '#4299e1'
+            }
+          }
+        }
+      }
+    });
+    
+    console.log('✅ 雷达图创建成功:', !!radarChart);
+  } catch (error) {
+    console.error('❌ 初始化雷达图失败:', error);
+    console.error('错误详情:', error.stack);
+  }
+};
 
 // 清空聊天记录
 const clearChat = async () => {
@@ -219,7 +632,17 @@ const clearChat = async () => {
   showEvaluation.value = false;
   evaluationRating.value = 0;
   evaluationMsg.value = "";
+  evaluationReasoning.value = "";
+  sbarScores.value = null;
+  expandedSbarItems.value = [];
+  showReasoning.value = false;
   audioChunks = [];
+  
+  // 销毁雷达图
+  if (radarChart) {
+    radarChart.destroy();
+    radarChart = null;
+  }
   
   // 停止录音（如果在录音中）
   if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -685,8 +1108,19 @@ const evaluateConversation = async () => {
   isEvaluating.value = true;
 
   try {
-    // 过滤掉错误消息
-    const validMessages = messages.value.filter(msg => msg.text !== "Error: Failed to send message.");
+    // 显示评估进度提示
+    const evaluatingMessage = {
+      id: Date.now(),
+      text: "🔄 正在進行 SBAR 評估分析，預計需要 1-2 分鐘，請稍候...",
+      from: 'ai'
+    };
+    messages.value.push(evaluatingMessage);
+
+    // 过滤掉错误消息和评估提示消息
+    const validMessages = messages.value.filter(msg => 
+      msg.text !== "Error: Failed to send message." && 
+      !msg.text.includes("正在進行 SBAR 評估分析")
+    );
 
     // 获取当前场景ID（必须有效）
     let sceneId = null;
@@ -755,16 +1189,47 @@ const evaluateConversation = async () => {
       throw new Error('评估失败：' + (response.data.error || '未知错误'));
     }
 
+    // 移除评估进度提示消息
+    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 SBAR 評估分析"));
+    if (messageIndex > -1) {
+      messages.value.splice(messageIndex, 1);
+    }
+
     // 显示评估结果
     evaluationRating.value = response.data.rating;
     evaluationMsg.value = response.data.evaluation_msg;
     evaluationReasoning.value = response.data.reasoning || ''; // 保存评估理由
+    sbarScores.value = response.data.sbar_scores || null; // 保存SBAR评分数据
     showEvaluation.value = true;
 
     console.log('评估成功，评分:', response.data.rating, '评估消息:', response.data.evaluation_msg);
     console.log('评估理由:', response.data.reasoning?.substring(0, 100) + '...');
+    console.log('SBAR评分:', response.data.sbar_scores);
+    console.log('🔍 前端接收到的完整响应:', JSON.stringify(response.data, null, 2));
+    console.log('🎯 sbarScores.value 设置为:', sbarScores.value);
+    console.log('📊 sbarScores.value 类型:', typeof sbarScores.value);
+
+    // 如果有SBAR数据，初始化雷达图
+    if (sbarScores.value) {
+      console.log('✅ 检测到SBAR数据，准备初始化雷达图...');
+      await nextTick(); // 等待DOM更新
+      console.log('🎨 DOM更新完成，开始初始化雷达图...');
+      await initRadarChart();
+      console.log('🎯 雷达图初始化完成');
+    } else {
+      console.log('❌ 未检测到SBAR数据，跳过雷达图初始化');
+      console.log('🔍 response.data.sbar_scores:', response.data.sbar_scores);
+      console.log('🔍 response.data 的所有键:', Object.keys(response.data));
+    }
   } catch (error) {
     console.error('评估失败:', error);
+    
+    // 移除评估进度提示消息
+    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 SBAR 評估分析"));
+    if (messageIndex > -1) {
+      messages.value.splice(messageIndex, 1);
+    }
+    
     alert('對話評估失敗：' + error.message);
   } finally {
     isEvaluating.value = false;
@@ -781,6 +1246,8 @@ const resetTraining = async () => {
   evaluationRating.value = 0;
   evaluationMsg.value = "";
   evaluationReasoning.value = "";
+  sbarScores.value = null;
+  expandedSbarItems.value = [];
   showReasoning.value = false;
 };
 
@@ -813,6 +1280,12 @@ onBeforeUnmount(async () => {
     } catch (error) {
       console.error('关闭STT会话失败:', error);
     }
+  }
+  
+  // 销毁雷达图
+  if (radarChart) {
+    radarChart.destroy();
+    radarChart = null;
   }
 });
 
@@ -863,6 +1336,104 @@ const insertNewline = () => {
     textarea.selectionStart = textarea.selectionEnd = start + 1;
     adjustTextareaHeight();
   });
+};
+
+// 生成PDF评估报告（使用HTML转图像方案，完美支持中文）
+const generatePDFReport = async () => {
+  try {
+    // 确保PDF库已加载
+    const librariesLoaded = await loadPDFLibraries();
+    if (!librariesLoaded) {
+      alert('PDF庫加載失敗，請重試');
+      return;
+    }
+
+    console.log('🖼️ 正在生成PDF報告...');
+    
+    // 显示PDF内容用于截图
+    const pdfContent = pdfContentRef.value;
+    if (!pdfContent) {
+      alert('PDF內容區域未找到，請重試');
+      return;
+    }
+    
+    pdfContent.style.display = 'block';
+    
+    // 等待DOM更新和字体加载
+    await nextTick();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 使用html2canvas截图
+    const canvas = await html2canvas(pdfContent, {
+      scale: 2, // 提高清晰度
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: pdfContent.scrollWidth,
+      height: pdfContent.scrollHeight,
+      logging: false // 关闭日志
+    });
+    
+    // 隐藏PDF内容
+    pdfContent.style.display = 'none';
+    
+    // 创建PDF
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    
+    const imgWidth = pdfWidth - 20; // 留边距
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    // 如果内容高度超过一页，需要分页
+    if (imgHeight <= pdfHeight - 20) {
+      // 单页
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, imgWidth, imgHeight);
+    } else {
+      // 多页处理
+      const pageHeight = pdfHeight - 20;
+      const totalPages = Math.ceil(imgHeight / pageHeight);
+      
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) pdf.addPage();
+        
+        const sourceY = i * (canvas.height / totalPages);
+        const sourceHeight = canvas.height / totalPages;
+        
+        // 创建临时canvas用于分页
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+        
+        tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+        
+        const tempImgHeight = (sourceHeight * imgWidth) / canvas.width;
+        pdf.addImage(tempCanvas.toDataURL('image/png'), 'PNG', 10, 10, imgWidth, tempImgHeight);
+      }
+    }
+    
+    // 生成文件名
+    const now = new Date();
+    const sceneName = getCurrentSceneName();
+    const fileName = `SBAR評估報告_${sceneName}_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
+    
+    // 保存PDF
+    pdf.save(fileName);
+    
+    console.log('✅ PDF報告生成成功:', fileName);
+    alert('📄 PDF評估報告已成功生成並下載！支持完整中文顯示');
+    
+  } catch (error) {
+    console.error('❌ 生成PDF報告失敗:', error);
+    alert('生成PDF報告失敗：' + error.message);
+    
+    // 确保隐藏PDF内容
+    if (pdfContentRef.value) {
+      pdfContentRef.value.style.display = 'none';
+    }
+  }
 };
 </script>
 
@@ -1184,5 +1755,177 @@ textarea::-webkit-scrollbar-thumb {
 
 textarea::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* SBAR雷达图样式 */
+.radar-chart-container {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sbar-radar-section {
+  animation: slideInUp 0.5s ease-out;
+}
+
+.sbar-item {
+  transition: all 0.2s ease;
+}
+
+.sbar-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sbar-legend {
+  background: rgba(249, 250, 251, 0.8);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .radar-chart-container {
+    height: 200px;
+  }
+  
+  .sbar-legend {
+    font-size: 0.7rem;
+  }
+  
+  .sbar-item {
+    padding: 0.5rem;
+  }
+}
+
+/* PDF预览样式 */
+.pdf-preview {
+  display: none;
+  background: white;
+  padding: 40px;
+  margin: 20px 0;
+  font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  max-width: 800px;
+}
+
+.pdf-title {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.pdf-section {
+  margin-bottom: 25px;
+}
+
+.pdf-section-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #e74c3c;
+  margin-bottom: 10px;
+}
+
+.pdf-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.pdf-score {
+  font-size: 20px;
+  font-weight: bold;
+  color: #e74c3c;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.sbar-dimension {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.sbar-dimension-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #3498db;
+  margin-bottom: 8px;
+}
+
+.sbar-score {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.sbar-suggestion {
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.sbar-reason {
+  color: #777;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.pdf-reasoning {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.conversation-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.conversation-user {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+.conversation-ai {
+  background: #f1f8e9;
+  border-left: 4px solid #4caf50;
+}
+
+.conversation-role {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.pdf-footer {
+  text-align: center;
+  margin-top: 30px;
+  color: #7f8c8d;
+  font-size: 12px;
+  border-top: 1px solid #ecf0f1;
+  padding-top: 15px;
 }
 </style>
