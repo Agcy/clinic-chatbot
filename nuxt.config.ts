@@ -24,10 +24,31 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss'
   ],
   
+  // 解决Three.js服务器端渲染问题
+  build: {
+    transpile: ['three']
+  },
+  
   // 添加路由规则
   routeRules: {
     '/.well-known/**': { 
       redirect: '/'
+    }
+  },
+  
+  // Vite配置 - 解决Three.js导入问题
+  vite: {
+    optimizeDeps: {
+      include: [
+        'three',
+        'three/examples/jsm/loaders/GLTFLoader',
+        'three/examples/jsm/loaders/FBXLoader',
+        'three/examples/jsm/loaders/DRACOLoader',
+        'three/examples/jsm/controls/OrbitControls'
+      ]
+    },
+    ssr: {
+      noExternal: ['three']
     }
   }
 })

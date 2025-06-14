@@ -28,3 +28,5 @@ public/model/*
 output.mp3
 
 test/
+
+ecosystem.config.cjs

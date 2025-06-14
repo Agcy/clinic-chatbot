@@ -50,9 +50,10 @@ export default defineEventHandler(async (event) => {
         const timestamp = Date.now();
         const outputFile = path.join(tempDir, `tts_${timestamp}.mp3`);
 
-        // 构建edge-tts命令
-        const command = `edge-tts --voice "${character.voice}" --text "${text.replace(/"/g, '\\"')}" --write-media "${outputFile}" --rate=+10% --volume=+5% --pitch=-5Hz`;
-        
+        // 构建edge-tts命令 - 使用绝对路径
+        const edgeTtsPath = process.env.EDGE_TTS_PATH || '/root/miniconda3/bin/edge-tts'; // 从环境变量读取路径，如果未设置则使用默认值
+        const command = `${edgeTtsPath} --voice "${character.voice}" --text "${text.replace(/"/g, '\\"')}" --write-media "${outputFile}" --rate=+10% --volume=+5% --pitch=-5Hz`;
+
         // console.log('执行TTS命令:', command);
 
         // 执行edge-tts命令
