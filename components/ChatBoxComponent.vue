@@ -21,7 +21,42 @@
               class="message-content px-4 py-3 rounded-xl max-w-[90%] text-sm"
               :class="msg.from === 'user' ? 'bg-gradient-to-r from-blue-500/80 to-blue-600/80 text-white backdrop-blur-sm' : 'bg-gradient-to-r from-white/80 to-gray-100/80 text-gray-800 backdrop-blur-sm'"
             >
-              {{ msg.text }}
+              <!-- 用户消息直接显示 -->
+              <template v-if="msg.from === 'user'">
+                {{ msg.text }}
+              </template>
+              
+              <!-- AI消息使用打字机效果 -->
+              <template v-else>
+                <!-- Thinking状态 -->
+                <div v-if="msg.isThinking" class="thinking-indicator text-gray-500 italic">
+                  <span class="thinking-dots">thinking</span>
+                  <span class="thinking-animation">...</span>
+                </div>
+                
+                <!-- 等待音频状态 -->
+                <div v-else-if="msg.waitingForAudio" class="waiting-audio-indicator text-gray-400 italic">
+                  <span class="waiting-dots">准备中</span>
+                  <span class="waiting-animation">...</span>
+                </div>
+                
+                <!-- 打字机效果 -->
+                <div v-else-if="msg.showTypewriter" class="typewriter-container">
+                  <Typer 
+                    :text="msg.text" 
+                    :speed="msg.typeSpeed || 80"
+                    :show-cursor="true"
+                    @finished="onTypewriterFinished(msg)"
+                    @typing="onTypewriterTyping(msg)"
+                    ref="typerRefs"
+                  />
+                </div>
+                
+                <!-- 完成后的静态文本 -->
+                <div v-else>
+                  {{ msg.text }}
+                </div>
+              </template>
             </div>
           </div>
         </transition-group>
@@ -312,6 +347,7 @@
 import { ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
+import { Typer } from 'vue3-text-typer';
 
 // 动态导入PDF相关库
 let jsPDF = null;
@@ -357,6 +393,7 @@ const showReasoning = ref(false); // 控制理由框的展开/折叠
 const sbarScores = ref(null); // SBAR各维度评分
 const expandedSbarItems = ref([]); // 展开的SBAR项目
 const currentSceneId = ref(null);
+const typerRefs = ref([]);
 
 let mediaRecorder;
 let audioChunks = [];
@@ -446,6 +483,25 @@ const getCurrentSceneDescription = () => {
     }
   }
   return '';
+};
+
+// 打字机完成回调
+const onTypewriterFinished = (msg) => {
+  console.log('🎯 打字机效果完成:', msg.text.substring(0, 50) + '...');
+  // 打字机完成后，将消息标记为静态显示
+  msg.showTypewriter = false;
+  msg.isThinking = false;
+  msg.waitingForAudio = false;
+  
+  // 清理动态属性
+  delete msg.typeSpeed;
+};
+
+// 打字机正在打字回调
+const onTypewriterTyping = (msg) => {
+  // console.log('正在打字:', msg.text.substring(0, 20) + '...');
+  // 可以在这里添加其他逻辑，比如滚动到底部
+  scrollToBottom();
 };
 
 // 获取当前日期时间
@@ -726,6 +782,16 @@ const sendMessage = async () => {
     adjustTextareaHeight();
   });
 
+  // 添加thinking状态的AI消息
+  const thinkingMessage = {
+    id: Date.now() + 1, // 确保ID唯一
+    text: '',
+    from: 'ai',
+    isThinking: true,
+    showTypewriter: false
+  };
+  messages.value.push(thinkingMessage);
+
   try {
     // 从localStorage获取当前场景信息
     let systemPrompt = "你是一位经验丰富的医生，正在接受培训者的问诊训练。请根据培训者的问题，给出专业、耐心的回答。";
@@ -769,12 +835,31 @@ const sendMessage = async () => {
     }
     
     const reply = aiResponse?.data?.response || "I didn't understand that.";
-    const aiMessage = {
-      id: Date.now(),
-      text: reply,
-      from: 'ai'
-    };
-    messages.value.push(aiMessage);
+    
+    // 找到thinking消息并准备更新
+    const thinkingIndex = messages.value.findIndex(msg => msg.isThinking);
+    let targetMessage = null;
+    
+    if (thinkingIndex !== -1) {
+      // 更新thinking消息的文本，但先不启动打字机
+      messages.value[thinkingIndex].text = reply;
+      messages.value[thinkingIndex].isThinking = false;
+      messages.value[thinkingIndex].showTypewriter = false; // 先不显示打字机
+      messages.value[thinkingIndex].waitingForAudio = true; // 等待音频
+      targetMessage = messages.value[thinkingIndex];
+    } else {
+      // 如果没找到thinking消息，直接添加新消息（备用方案）
+      const aiMessage = {
+        id: Date.now(),
+        text: reply,
+        from: 'ai',
+        isThinking: false,
+        showTypewriter: false, // 先不显示打字机
+        waitingForAudio: true // 等待音频
+      };
+      messages.value.push(aiMessage);
+      targetMessage = aiMessage;
+    }
 
     // 转换AI回复为语音并播放，在语音开始播放时控制角色动画
     try {
@@ -801,11 +886,26 @@ const sendMessage = async () => {
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
       
-        // 监听音频开始播放，启动说话动画
+        // 监听音频开始播放，启动说话动画和打字机效果
         audio.addEventListener('play', () => {
           if (window.playTalkAnimation) {
             window.playTalkAnimation(true);
             // console.log('语音开始播放，启动说话动画');
+          }
+          
+          // 启动打字机效果，与语音同步
+          if (targetMessage && targetMessage.waitingForAudio) {
+            targetMessage.waitingForAudio = false;
+            targetMessage.showTypewriter = true;
+            
+            // 根据文本长度和音频时长计算打字速度
+            const textLength = reply.length;
+            // 估算音频时长（中文大约每秒3-4个字符）
+            const estimatedDuration = textLength / 3.5 * 1000; // 毫秒
+            const typeSpeed = Math.max(30, Math.min(150, estimatedDuration / textLength)); // 限制在30-150ms之间
+            
+            targetMessage.typeSpeed = Math.round(typeSpeed);
+            console.log(`🎯 文本长度: ${textLength}, 估算时长: ${estimatedDuration}ms, 打字速度: ${typeSpeed}ms/字符`);
           }
         });
 
@@ -841,10 +941,23 @@ const sendMessage = async () => {
     audio.play();
     } catch (ttsError) {
       console.error('TTS处理失败:', ttsError);
-      // TTS失败时不需要停止动画，因为动画还没开始
+      // TTS失败时，直接显示打字机效果（不等待音频）
+      if (targetMessage && targetMessage.waitingForAudio) {
+        targetMessage.waitingForAudio = false;
+        targetMessage.showTypewriter = true;
+        targetMessage.typeSpeed = 80; // 使用默认速度
+        console.log('🔊 TTS失败，使用默认打字机效果');
+      }
     }
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // 清除thinking状态和等待音频状态
+    const thinkingIndex = messages.value.findIndex(msg => msg.isThinking || msg.waitingForAudio);
+    if (thinkingIndex !== -1) {
+      messages.value.splice(thinkingIndex, 1);
+    }
+    
     alert('發送消息失敗：' + error.message);
   }
 };
@@ -1435,6 +1548,8 @@ const generatePDFReport = async () => {
     }
   }
 };
+
+
 </script>
 
 <style scoped>
@@ -1927,5 +2042,83 @@ textarea::-webkit-scrollbar-thumb:hover {
   font-size: 12px;
   border-top: 1px solid #ecf0f1;
   padding-top: 15px;
+}
+
+/* 打字机和thinking效果样式 */
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.thinking-dots {
+  opacity: 0.7;
+}
+
+.thinking-animation {
+  animation: thinking-pulse 1.5s ease-in-out infinite;
+}
+
+/* 等待音频状态样式 */
+.waiting-audio-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.waiting-dots {
+  opacity: 0.6;
+}
+
+.waiting-animation {
+  animation: waiting-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+  0%, 60%, 100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes waiting-pulse {
+  0%, 60%, 100% {
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 0.8;
+  }
+}
+
+/* 打字机容器样式 */
+.typewriter-container {
+  min-height: 1.2em; /* 确保有最小高度 */
+}
+
+/* 打字机光标样式 */
+.typewriter-container ::v-deep(.cursor) {
+  animation: blink 1s infinite;
+  color: #6b7280;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* 消息淡入动画 */
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 </style>

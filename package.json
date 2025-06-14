@@ -34,6 +34,7 @@
     "three": "^0.173.0",
     "vue": "latest",
     "vue-router": "latest",
+    "vue3-text-typer": "^0.1.9",
     "web-speech-cognitive-services": "^8.1.1",
     "ws": "^8.18.2"
   },
