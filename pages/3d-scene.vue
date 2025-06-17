@@ -5,6 +5,9 @@
       :enable-controls="enableControls"
     />
     
+    <!-- 返回主页按钮 -->
+    <ReturnHomeButton position="top-left" />
+    
     <div class="controls">
       <h2>3D场景控制器</h2>
       
@@ -58,6 +61,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import ThreeDSceneLoaderWithConfig from '~/components/ThreeDSceneLoaderWithConfig.vue';
+import ReturnHomeButton from '~/components/ReturnHomeButton.vue';
 import { useRoute, useRouter } from 'vue-router';
 
 // 获取路由对象

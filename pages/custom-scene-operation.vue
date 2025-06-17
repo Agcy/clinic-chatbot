@@ -1,16 +1,15 @@
-<!-- 训练页面 -->
+<!-- 自定义手术场景页面 -->
 <template>
   <div class="chat-container">
     <!-- 3D场景背景 -->
     <div class="scene-background">
-      <ThreeDSceneLoaderWithConfig
-        v-if="sceneConfigId"
-        :config-id="sceneConfigId"
-        :enable-controls="false"
+      <CustomSceneLoader
+        v-if="sceneId"
+        :scene-id="sceneId"
       />
       <div v-else class="loading-scene">
         <div class="loading-spinner"></div>
-        <p>正在加载场景配置...</p>
+        <p>正在加载自定义场景...</p>
       </div>
     </div>
     
@@ -40,34 +39,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import ChatBoxComponent from "@/components/ChatBoxComponent.vue";
-import ThreeDSceneLoaderWithConfig from "@/components/ThreeDSceneLoaderWithConfig.vue";
+import CustomSceneLoader from "@/components/CustomSceneLoader.vue";
 import ReturnHomeButton from "@/components/ReturnHomeButton.vue";
 
 const router = useRouter();
+const route = useRoute();
 const currentScene = ref(null);
 const isCardCollapsed = ref(false);
-
-// 根据当前场景确定配置ID
-const sceneConfigId = computed(() => {
-  // 如果场景数据还未加载，返回null（ThreeDSceneLoaderWithConfig会处理这种情况）
-  if (!currentScene.value) {
-    return null;
-  }
-  
-  // 直接使用场景数据中的config_id字段
-  const configId = currentScene.value.config_id;
-  
-  if (!configId) {
-    console.error(`场景 ${currentScene.value.scene_id} 缺少config_id配置`);
-    return null;
-  }
-  
-  console.log(`场景 ${currentScene.value.scene_id} 使用配置ID: ${configId}`);
-  return configId;
-});
+const sceneId = ref(null);
 
 // 切换提示卡片的展开/收起状态
 const toggleCard = () => {
@@ -75,6 +57,9 @@ const toggleCard = () => {
 };
 
 onMounted(() => {
+  // 从URL参数获取scene_id
+  sceneId.value = route.query.scene_id;
+  
   // 从localStorage获取当前场景信息
   const sceneData = localStorage.getItem('currentScene');
   if (!sceneData) {
@@ -85,7 +70,8 @@ onMounted(() => {
 
   try {
     currentScene.value = JSON.parse(sceneData);
-    console.log('当前场景:', currentScene.value);
+    console.log('当前自定义手术场景:', currentScene.value);
+    console.log('场景ID:', sceneId.value);
   } catch (error) {
     console.error('解析场景数据失败:', error);
     router.push('/');

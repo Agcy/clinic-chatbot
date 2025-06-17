@@ -349,6 +349,21 @@ import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 import { Typer } from 'vue3-text-typer';
 
+// 定义组件props
+const props = defineProps({
+  scene: {
+    type: Object,
+    required: true
+  },
+  isTraining: {
+    type: Boolean,
+    default: false
+  }
+});
+
+// 定义组件事件
+const emit = defineEmits(['training-complete']);
+
 // 动态导入PDF相关库
 let jsPDF = null;
 let html2canvas = null;
@@ -1293,6 +1308,15 @@ const finishTraining = () => {
   }
   
   trainingFinished.value = true;
+  
+  // 发射训练完成事件（供自定义场景使用）
+  if (emit) {
+    try {
+      emit('training-complete');
+    } catch (error) {
+      console.log('发射training-complete事件时出错（这个错误可以忽略）:', error);
+    }
+  }
 };
 
 /**

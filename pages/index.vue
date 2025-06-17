@@ -521,10 +521,30 @@ const selectScene = async (sceneId) => {
   try {
     const response = await axios.post('/api/scenes', { scene_id: sceneId });
     if (response.data.success) {
-      // 将场景信息存储到localStorage
-      localStorage.setItem('currentScene', JSON.stringify(response.data.scene));
-      // 跳转到训练页面
-      router.push('/training');
+      const scene = response.data.scene;
+      
+      // 检查是否为自定义场景
+      if (scene.config_id === 'custom') {
+        // 将场景信息存储到localStorage，包含scene_id
+        localStorage.setItem('currentScene', JSON.stringify(scene));
+        
+        // 根据scene_id跳转到不同的自定义场景
+        if (sceneId === 'brain_surgery_002') {
+          // 跳转到自定义手术场景页面
+          router.push(`/custom-scene-operation?scene_id=${sceneId}`);
+        } else if (sceneId === 'brain_surgery_003') {
+          // 跳转到自定义电话场景页面
+          router.push(`/custom-scene-phone?scene_id=${sceneId}`);
+        } else {
+          // 默认跳转到手术场景
+          router.push(`/custom-scene-operation?scene_id=${sceneId}`);
+        }
+      } else {
+        // 将场景信息存储到localStorage
+        localStorage.setItem('currentScene', JSON.stringify(scene));
+        // 跳转到训练页面
+        router.push('/training');
+      }
     } else {
       console.error('获取场景详情失败:', response.data.error);
     }

@@ -22,6 +22,17 @@
     "description": "医生角色，使用男性粤语音色"
   },
   {
+    "name": "doctor_phone",
+    "url": "/model/doctor_phone.glb",
+    "animations": {
+      "talk": "talk",
+      "idle": "idle"
+    },
+    "voice": "zh-HK-WanLungNeural",
+    "gender": "male",
+    "description": "医生角色，使用男性粤语音色"
+  },
+  {
     "name": "patient_woman",
     "url": "/model/woman.glb",
     "animations": {
