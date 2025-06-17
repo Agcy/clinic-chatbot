@@ -69,7 +69,13 @@
           <div class="p-4">
             <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ scene.scene_title }}</h3>
             <div class="flex items-center justify-between">
-              <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+              <span 
+                class="inline-block px-3 py-1 rounded-full text-sm font-medium"
+                :style="{ 
+                  backgroundColor: getTypeTagColor(scene.scene_type), 
+                  color: getTypeTagTextColor(scene.scene_type) 
+                }"
+              >
                 {{ scene.scene_type }}
               </span>
               <button 
@@ -83,12 +89,21 @@
             <div v-if="showDebug" class="mt-2 text-xs text-gray-500">
               <div>角色: <span class="font-mono">{{ scene.trainee_character || '未定義' }}</span></div>
               <div>角色描述: <span class="font-mono">{{ scene.scene_description_charactor ? '有' : '無' }}</span></div>
+              <div>颜色: <span class="font-mono">{{ scene.type_color || '未设置' }}</span></div>
             </div>
           </div>
           
           <!-- 角色描述悬浮提示 -->
-          <div v-if="!isDeleteMode" class="scene-tooltip absolute inset-0 bg-white bg-opacity-98 p-4 overflow-auto flex flex-col z-20 shadow-lg">
-            <h4 class="text-lg font-semibold text-blue-600 mb-2 sticky top-0 bg-white py-1">您將扮演: {{ scene.trainee_character || '醫生' }}</h4>
+          <div 
+            v-if="!isDeleteMode" 
+            class="scene-tooltip absolute inset-0 bg-white bg-opacity-98 p-4 overflow-auto flex flex-col z-20 shadow-lg"
+          >
+            <h4 
+              class="text-lg font-semibold mb-2 sticky top-0 bg-white py-1"
+              :style="{ color: getTypeTagTextColor(scene.scene_type) }"
+            >
+              您將扮演: {{ scene.trainee_character || '醫生' }}
+            </h4>
             <div class="text-sm text-gray-700 flex-grow overflow-auto">
               <p v-if="scene.scene_description_charactor && scene.scene_description_charactor.trim()">
                 {{ scene.scene_description_charactor }}
@@ -97,7 +112,12 @@
                 暫無角色描述，請點擊"檢視角色"按鈕獲取詳情。
               </p>
             </div>
-            <div class="mt-2 text-xs text-blue-500 text-center sticky bottom-0 bg-white py-1">點擊開始訓練</div>
+            <div 
+              class="mt-2 text-xs text-center sticky bottom-0 bg-white py-1"
+              :style="{ color: getTypeTagTextColor(scene.scene_type) }"
+            >
+              點擊開始訓練
+            </div>
           </div>
         </div>
       </div>
@@ -487,6 +507,24 @@ const generateCustomScene = async () => {
 const getLabelByValue = (options, value) => {
   const option = options.find(opt => opt.value === value);
   return option ? option.label : value;
+};
+
+// 根据场景类型获取标签背景颜色
+const getTypeTagColor = (sceneType) => {
+  const colorMap = {
+    '助手对医生': '#E3F2FD', // 淡蓝色
+    '医生对病人': '#E8F5E8'  // 淡绿色
+  };
+  return colorMap[sceneType] || '#F5F5F5'; // 默认浅灰色
+};
+
+// 根据场景类型获取标签文字颜色
+const getTypeTagTextColor = (sceneType) => {
+  const colorMap = {
+    '助手对医生': '#1976D2', // 蓝色文字
+    '医生对病人': '#388E3C'  // 绿色文字
+  };
+  return colorMap[sceneType] || '#616161'; // 默认灰色文字
 };
 
 // 获取场景列表
