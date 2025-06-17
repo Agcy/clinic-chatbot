@@ -11,6 +11,17 @@
 		"config_id": "doctor-operating-room"
 	},
 	{
+		"scene_id": "brain_surgery_002",
+		"card_img": "/assets/img.png",
+		"scene_title": "腦外科手術 - 手術室內的配合(定制版)",
+		"scene_description_model": "你是一名經驗豐富的腦外科主刀醫生（程至美），正在進行一場高風險的腦部手術。你的助手（江医生）正在協助你完成手術。你的目標是確保手術順利進行，並適時指導助手提供器械或進行必要的協助。你應該保持專業、冷靜，並清晰地描述手術步驟。在助手詢問問題時，你可以耐心解釋，但要確保手術的精確性。請用粵語進行對話，並嚴格按照角色演繹。",
+		"scene_description_charactor": "你是一名外科医生助手（江满月），正在协助脑外科主刀医生（程至美）进行一场复杂的脑部手术。你的角色是按照主刀医生的指令进行配合，例如提供手术器械、监测病人状况（如血压）、并适时向医生汇报手术进展。在手术过程中，你可能需要向医生请教手术步骤或提供观察报告。请用粤语与医生交流，保持专业，并专注于手术过程。",
+		"model_charactor": "腦外科主刀醫生程至美",
+		"trainee_character": "外科医生助手江满月",
+		"scene_type": "助手对医生",
+		"config_id": "custom"
+	},
+	{
 		"scene_id": "vascular_tumor_001",
 		"card_img": "/assets/img.png",
 		"scene_title": "脑血管瘤诊断与沟通",
@@ -41,7 +52,7 @@
 		"model_charactor": "病人周小姐",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "patient-operating-room"
+		"config_id": "patient2-operating-room-4"
 	},
 	{
 		"scene_id": "gynecology_abdominal_pain_001",
@@ -52,7 +63,7 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "patient-operating-room-2"
+		"config_id": "patien2-operating-room-3"
 	},
 	{
 		"scene_id": "gynecology_hospitalization_001",
@@ -63,7 +74,7 @@
 		"model_charactor": "病人",
 		"trainee_character": "急症室醫生唐姿禮",
 		"scene_type": "医生对病人",
-		"config_id": "patient-operating-room"
+		"config_id": "patien2-operating-room-3"
 	},
 	{
 		"scene_id": "gastroenterology_abdominal_pain_001",

@@ -1023,43 +1023,129 @@ const startRecording = async () => {
     
     const source = audioContext.createMediaStreamSource(stream);
     
-    // 创建ScriptProcessor或AudioWorklet进行实时音频处理
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
-    
-    // 初始化STT会话
-    await initSTTSession();
-    
+    // 使用现代的AudioWorklet或降级到ScriptProcessor
     let audioBuffer = [];
     
     // 将audioBuffer保存到window对象供停止录音时访问
     window.audioBufferData = audioBuffer;
     
-    processor.onaudioprocess = async (e) => {
-      if (!isRecording.value || !sttSessionId) return;
-      
-      const inputBuffer = e.inputBuffer;
-      const inputData = inputBuffer.getChannelData(0);
-      
-      // 转换为16位PCM（小端序）
-      const pcmData = new Int16Array(inputData.length);
-      for (let i = 0; i < inputData.length; i++) {
-        // 确保样本在[-1, 1]范围内
-        const sample = Math.max(-1, Math.min(1, inputData[i]));
-        // 转换为16位整数
-        pcmData[i] = sample < 0 ? Math.floor(sample * 0x8000) : Math.floor(sample * 0x7FFF);
-      }
-      
-      // 转换为字节数组（小端序）
-      const bytes = new Uint8Array(pcmData.buffer);
-      audioBuffer.push(...bytes);
-      
-      // 每200ms发送一次数据 (16000 * 2 * 0.2 = 6400 bytes)
-      // HTTP请求不适合太频繁，调整为200ms
-      if (audioBuffer.length >= 6400) {
-        const chunkData = new Uint8Array(audioBuffer.splice(0, 6400));
-        await sendAudioData(chunkData, false);
+    // 初始化STT会话
+    await initSTTSession();
+    
+    // 尝试使用AudioWorklet，如果不支持则降级到ScriptProcessor
+    try {
+      // 检查是否支持AudioWorklet
+      if (audioContext.audioWorklet && typeof audioContext.audioWorklet.addModule === 'function') {
+        // 创建内联AudioWorklet处理器
+        const workletCode = `
+          class AudioProcessor extends AudioWorkletProcessor {
+            constructor() {
+              super();
+              this.bufferSize = 4096;
+              this.buffer = new Float32Array(this.bufferSize);
+              this.bufferIndex = 0;
+            }
+            
+            process(inputs, outputs, parameters) {
+              const input = inputs[0];
+              if (input.length > 0) {
+                const inputChannel = input[0];
+                
+                for (let i = 0; i < inputChannel.length; i++) {
+                  this.buffer[this.bufferIndex] = inputChannel[i];
+                  this.bufferIndex++;
+                  
+                  if (this.bufferIndex >= this.bufferSize) {
+                    // 发送音频数据到主线程
+                    this.port.postMessage({
+                      type: 'audioData',
+                      data: Array.from(this.buffer)
+                    });
+                    this.bufferIndex = 0;
+                  }
+                }
+              }
+              return true;
+            }
           }
-    };
+          
+          registerProcessor('audio-processor', AudioProcessor);
+        `;
+        
+        // 创建Blob URL用于AudioWorklet
+        const blob = new Blob([workletCode], { type: 'application/javascript' });
+        const workletUrl = URL.createObjectURL(blob);
+        
+        await audioContext.audioWorklet.addModule(workletUrl);
+        processor = new AudioWorkletNode(audioContext, 'audio-processor');
+        
+        // 监听AudioWorklet消息
+        processor.port.onmessage = async (event) => {
+          if (event.data.type === 'audioData' && isRecording.value && sttSessionId) {
+            const inputData = new Float32Array(event.data.data);
+            
+            // 转换为16位PCM（小端序）
+            const pcmData = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              // 确保样本在[-1, 1]范围内
+              const sample = Math.max(-1, Math.min(1, inputData[i]));
+              // 转换为16位整数
+              pcmData[i] = sample < 0 ? Math.floor(sample * 0x8000) : Math.floor(sample * 0x7FFF);
+            }
+            
+            // 转换为字节数组（小端序）
+            const bytes = new Uint8Array(pcmData.buffer);
+            audioBuffer.push(...bytes);
+            
+            // 每200ms发送一次数据 (16000 * 2 * 0.2 = 6400 bytes)
+            if (audioBuffer.length >= 6400) {
+              const chunkData = new Uint8Array(audioBuffer.splice(0, 6400));
+              await sendAudioData(chunkData, false);
+            }
+          }
+        };
+        
+        // 清理Blob URL
+        URL.revokeObjectURL(workletUrl);
+        
+        console.log('✅ 使用现代AudioWorklet进行音频处理');
+      } else {
+        throw new Error('AudioWorklet不支持，降级到ScriptProcessor');
+      }
+    } catch (workletError) {
+      console.warn('AudioWorklet初始化失败，降级到ScriptProcessor:', workletError.message);
+      
+      // 降级到ScriptProcessor（已弃用但兼容性好）
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+      
+      processor.onaudioprocess = async (e) => {
+        if (!isRecording.value || !sttSessionId) return;
+        
+        const inputBuffer = e.inputBuffer;
+        const inputData = inputBuffer.getChannelData(0);
+        
+        // 转换为16位PCM（小端序）
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          // 确保样本在[-1, 1]范围内
+          const sample = Math.max(-1, Math.min(1, inputData[i]));
+          // 转换为16位整数
+          pcmData[i] = sample < 0 ? Math.floor(sample * 0x8000) : Math.floor(sample * 0x7FFF);
+        }
+        
+        // 转换为字节数组（小端序）
+        const bytes = new Uint8Array(pcmData.buffer);
+        audioBuffer.push(...bytes);
+        
+        // 每200ms发送一次数据 (16000 * 2 * 0.2 = 6400 bytes)
+        if (audioBuffer.length >= 6400) {
+          const chunkData = new Uint8Array(audioBuffer.splice(0, 6400));
+          await sendAudioData(chunkData, false);
+        }
+      };
+      
+      console.log('⚠️ 使用ScriptProcessor进行音频处理（已弃用）');
+    }
     
     source.connect(processor);
     processor.connect(audioContext.destination);
@@ -1816,7 +1902,7 @@ input:focus {
   }
   
   .voice-btn {
-    /* height由h-14类控制 */
+    height: 3.5rem; /* 明确设置高度，与h-14类一致 */
   }
   
   .voice-icon {
