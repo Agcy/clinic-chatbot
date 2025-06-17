@@ -61,126 +61,7 @@
           </div>
         </transition-group>
         
-        <!-- 评估结果显示区域 -->
-        <div v-if="showEvaluation" class="evaluation-results bg-gradient-to-r from-yellow-50/80 to-orange-50/80 text-gray-800 rounded-xl p-3 my-3 border border-yellow-200/50 shadow-lg backdrop-blur-sm">
-          <h3 class="text-lg font-bold mb-3 text-yellow-700">🎯 SBAR 訓練評估結果</h3>
-          
-          <!-- 总体评分 -->
-          <div class="rating flex items-center mb-3">
-            <span class="mr-2 font-medium">總體評分:</span>
-            <div class="rating-stars flex items-center bg-white px-3 py-1 rounded-full shadow-sm">
-              <span 
-                v-for="i in 10" 
-                :key="i" 
-                :class="[
-                  'transition-all duration-300 transform',
-                  i <= evaluationRating ? 'text-yellow-400 scale-110' : 'text-gray-300'
-                ]"
-              >★</span>
-              <span class="ml-2 font-bold text-yellow-600">{{ evaluationRating }}/10</span>
-            </div>
-          </div>
-          
-          <!-- 总体改进建议 -->
-          <div class="evaluation-msg bg-white rounded-xl p-3 shadow-inner mb-3">
-            <p class="text-sm font-medium text-gray-700 mb-1">改進建議:</p>
-            <p class="text-sm text-gray-600 leading-relaxed">{{ evaluationMsg }}</p>
-          </div>
-          
-          <!-- SBAR雷达图 -->
-          <div v-if="sbarScores" class="sbar-radar-section bg-white rounded-xl p-4 shadow-inner mb-3">
-            <h4 class="text-md font-bold mb-3 text-center text-gray-700">📊 SBAR 能力雷達圖</h4>
-            
-            <!-- 雷达图容器 -->
-            <div class="radar-chart-container relative mb-4">
-              <canvas ref="radarChartRef" width="300" height="300"></canvas>
-            </div>
-            
-            <!-- SBAR维度说明 -->
-            <div class="sbar-legend text-xs text-gray-600 mb-3">
-              <div class="grid grid-cols-2 gap-2">
-                <div class="flex items-center">
-                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  <span><strong>S</strong> - 情況描述</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  <span><strong>B</strong> - 背景收集</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  <span><strong>A</strong> - 評估分析</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  <span><strong>R</strong> - 建議方案</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- SBAR详细评分 -->
-            <div class="sbar-details space-y-2">
-              <div 
-                v-for="(dimension, key) in sbarScores" 
-                :key="key"
-                class="sbar-item bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                @click="toggleSbarDetail(key)"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center">
-                    <span class="font-bold text-blue-600 mr-2">{{ getSbarLabel(key) }}</span>
-                    <span class="text-sm text-gray-600">{{ getSbarFullName(key) }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold text-lg mr-2" :class="getSbarScoreColor(dimension.rank)">
-                      {{ dimension.rank }}/10
-                    </span>
-                    <svg 
-                      :class="['w-4 h-4 transition-transform duration-200', expandedSbarItems.includes(key) ? 'rotate-180' : '']"
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-                
-                <!-- 展开的详细信息 -->
-                <div v-show="expandedSbarItems.includes(key)" class="mt-3 pt-3 border-t border-gray-200">
-                  <div class="mb-2">
-                    <p class="text-xs font-medium text-gray-700 mb-1">💡 改進建議:</p>
-                    <p class="text-xs text-gray-600 leading-relaxed">{{ dimension.message }}</p>
-                  </div>
-                  <div>
-                    <p class="text-xs font-medium text-gray-700 mb-1">📝 評估理由:</p>
-                    <p class="text-xs text-gray-500 leading-relaxed italic">{{ dimension.reason }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 可折叠的总体评估理由框 -->
-          <div v-if="evaluationReasoning" class="reasoning-section">
-            <button 
-              @click="showReasoning = !showReasoning"
-              class="w-full text-left bg-blue-50/80 hover:bg-blue-100/80 rounded-lg p-2 transition-all duration-200 flex items-center justify-between text-sm font-medium text-blue-700"
-            >
-              <span>📋 總體評估詳細理由</span>
-              <svg 
-                :class="['w-4 h-4 transition-transform duration-200', showReasoning ? 'rotate-180' : '']"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div 
-              v-show="showReasoning" 
-              class="reasoning-content bg-white rounded-lg p-3 mt-2 shadow-inner border border-blue-100 text-xs text-gray-600 leading-relaxed max-h-48 overflow-y-auto"
-            >
-              <pre class="whitespace-pre-wrap font-mono">{{ evaluationReasoning }}</pre>
-            </div>
-          </div>
-        </div>
+
       </div>
 
       <!-- 输入区域 -->
@@ -246,7 +127,8 @@
             
             <!-- 训练后按钮组 -->
             <template v-else>
-              <div v-if="!showEvaluation" class="flex gap-3 w-full">
+              <!-- 显示评估按钮（评估前） -->
+              <div v-if="!showEvaluation && !showEvaluationSummary" class="flex gap-3 w-full">
                 <button
                     type="button"
                     @click="evaluateConversation"
@@ -256,29 +138,82 @@
                   📊 {{ isEvaluating ? "SBAR評估中..." : "SBAR評估" }}
                 </button>
               </div>
-              <div v-else class="flex gap-3 w-full">
-                <button
-                    type="button"
-                    @click="resetTraining"
-                    class="btn-primary bg-gradient-to-r from-green-500 to-green-600 h-14 flex-1 min-w-[7rem]"
+
+              <!-- 显示评估摘要和操作按钮（评估后） -->
+              <div v-else-if="showEvaluationSummary && evaluationSummaryData" class="w-full space-y-3">
+                <!-- 评估摘要卡片 -->
+                <div 
+                  @click="emit('show-evaluation-card')"
+                  class="evaluation-summary-card bg-gradient-to-r from-purple-50/90 to-blue-50/90 backdrop-blur-sm border border-purple-200/50 rounded-xl p-4 cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
                 >
-                  🔄 再次訓練
-                </button>
-                <button
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="text-2xl">📊</span>
+                      <span class="font-semibold text-gray-800">SBAR評估結果</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-purple-600">
+                      <span class="text-sm">點擊查看詳情</span>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <!-- 总分显示 -->
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">總體評分:</span>
+                      <div class="flex items-center gap-2">
+                        <div class="flex">
+                          <span v-for="i in 5" :key="i" class="text-lg">
+                            {{ i <= Math.round((evaluationSummaryData?.rating || 0) / 2) ? '⭐' : '☆' }}
+                          </span>
+                        </div>
+                        <span class="font-bold text-purple-600">{{ evaluationSummaryData?.rating || 0 }}/10</span>
+                      </div>
+                    </div>
+                    
+                    <!-- SBAR各维度简要显示 -->
+                    <div v-if="evaluationSummaryData?.sbarScores && Object.keys(evaluationSummaryData.sbarScores).length > 0" class="grid grid-cols-4 gap-2 mt-3">
+                      <div 
+                        v-for="(dimension, key) in evaluationSummaryData.sbarScores" 
+                        :key="key"
+                        class="text-center"
+                      >
+                        <div class="text-xs text-gray-500 mb-1">{{ getSbarLabel(key) }}</div>
+                        <div 
+                          class="text-sm font-semibold px-2 py-1 rounded-full"
+                          :class="getSbarScoreColor(dimension?.rank || 0) === 'text-green-600' ? 'bg-green-100 text-green-700' :
+                                 getSbarScoreColor(dimension?.rank || 0) === 'text-yellow-600' ? 'bg-yellow-100 text-yellow-700' :
+                                 getSbarScoreColor(dimension?.rank || 0) === 'text-orange-600' ? 'bg-orange-100 text-orange-700' :
+                                 'bg-red-100 text-red-700'"
+                        >
+                          {{ dimension?.rank || 0 }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="flex gap-2">
+                  <button
                     type="button"
-                    @click="generatePDFReport"
-                    class="btn-primary bg-gradient-to-r from-orange-500 to-orange-600 h-14 flex-1 min-w-[7rem]"
-                >
-                  📄 下載PDF
-                </button>
-                <button
+                    @click="emit('retry-training')"
+                    class="btn-secondary bg-gradient-to-r from-green-500 to-green-600 text-white h-12 flex-1 text-sm"
+                  >
+                    🔄 再次對話
+                  </button>
+                  <button
                     type="button"
-                    @click="goToHome"
-                    class="btn-primary bg-gradient-to-r from-purple-500 to-purple-600 h-14 flex-1 min-w-[7rem]"
-                >
-                  🏠 回到主頁
-                </button>
+                    @click="emit('go-home')"
+                    class="btn-secondary bg-gradient-to-r from-gray-500 to-gray-600 text-white h-12 flex-1 text-sm"
+                  >
+                    🏠 回到主頁
+                  </button>
+                </div>
               </div>
+
             </template>
           </div>
         </form>
@@ -312,9 +247,9 @@
         class="sbar-dimension"
       >
         <div class="sbar-dimension-title">{{ getSbarLabel(key) }} - {{ getSbarFullName(key) }}</div>
-        <div class="sbar-score" :style="{ color: getSbarScoreColorHex(dimension.rank) }">評分: {{ dimension.rank }}/10</div>
-        <div class="sbar-suggestion"><strong>💡 改進建議:</strong> {{ dimension.message }}</div>
-        <div class="sbar-reason"><strong>📝 評估理由:</strong> {{ dimension.reason }}</div>
+        <div class="sbar-score" :style="{ color: getSbarScoreColorHex(dimension?.rank || 0) }">評分: {{ dimension?.rank || 0 }}/10</div>
+        <div class="sbar-suggestion"><strong>💡 改進建議:</strong> {{ dimension?.message || '無' }}</div>
+        <div class="sbar-reason"><strong>📝 評估理由:</strong> {{ dimension?.reason || '無' }}</div>
       </div>
     </div>
 
@@ -344,7 +279,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, nextTick, watch, onBeforeUnmount, onErrorCaptured } from 'vue';
 import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 import { Typer } from 'vue3-text-typer';
@@ -353,16 +288,24 @@ import { Typer } from 'vue3-text-typer';
 const props = defineProps({
   scene: {
     type: Object,
-    required: true
+    default: () => ({})
   },
   isTraining: {
     type: Boolean,
     default: false
+  },
+  showEvaluationSummary: {
+    type: Boolean,
+    default: false
+  },
+  evaluationSummaryData: {
+    type: Object,
+    default: () => null
   }
 });
 
 // 定义组件事件
-const emit = defineEmits(['training-complete']);
+const emit = defineEmits(['training-complete', 'evaluation-complete', 'show-evaluation-card', 'retry-training', 'go-home']);
 
 // 动态导入PDF相关库
 let jsPDF = null;
@@ -1381,7 +1324,7 @@ const evaluateConversation = async () => {
     }
 
     // 准备对话数据
-    const conversationData = {
+    const evaluationRequest = {
       userId: 'default_user',  // 使用与其他API一致的用户ID
       scenarioId: sceneId,
       messages: validMessages.map(msg => ({
@@ -1392,7 +1335,7 @@ const evaluateConversation = async () => {
       sceneData: sceneData  // 传递完整的场景数据
     };
 
-    console.log('发送评估请求:', conversationData);
+    console.log('发送评估请求:', evaluationRequest);
     console.log('场景数据:', {
       scene_id: sceneData.scene_id,
       scene_description_model: sceneData.scene_description_model?.substring(0, 100) + '...',
@@ -1400,7 +1343,7 @@ const evaluateConversation = async () => {
     });
 
     // 调用评估API
-    const response = await axios.post("/api/evaluate-conversation", conversationData);
+    const response = await axios.post("/api/evaluate-conversation", evaluationRequest);
     
     console.log('评估API响应:', response.data);
     
@@ -1418,32 +1361,32 @@ const evaluateConversation = async () => {
       messages.value.splice(messageIndex, 1);
     }
 
-    // 显示评估结果
+    // 保存评估结果
     evaluationRating.value = response.data.rating;
     evaluationMsg.value = response.data.evaluation_msg;
     evaluationReasoning.value = response.data.reasoning || ''; // 保存评估理由
     sbarScores.value = response.data.sbar_scores || null; // 保存SBAR评分数据
-    showEvaluation.value = true;
 
     console.log('评估成功，评分:', response.data.rating, '评估消息:', response.data.evaluation_msg);
     console.log('评估理由:', response.data.reasoning?.substring(0, 100) + '...');
     console.log('SBAR评分:', response.data.sbar_scores);
-    console.log('🔍 前端接收到的完整响应:', JSON.stringify(response.data, null, 2));
-    console.log('🎯 sbarScores.value 设置为:', sbarScores.value);
-    console.log('📊 sbarScores.value 类型:', typeof sbarScores.value);
 
-    // 如果有SBAR数据，初始化雷达图
-    if (sbarScores.value) {
-      console.log('✅ 检测到SBAR数据，准备初始化雷达图...');
-      await nextTick(); // 等待DOM更新
-      console.log('🎨 DOM更新完成，开始初始化雷达图...');
-      await initRadarChart();
-      console.log('🎯 雷达图初始化完成');
-    } else {
-      console.log('❌ 未检测到SBAR数据，跳过雷达图初始化');
-      console.log('🔍 response.data.sbar_scores:', response.data.sbar_scores);
-      console.log('🔍 response.data 的所有键:', Object.keys(response.data));
-    }
+    // 准备评估数据
+    const evaluationData = {
+      rating: response.data.rating,
+      evaluation_msg: response.data.evaluation_msg,
+      reasoning: response.data.reasoning,
+      sbar_scores: response.data.sbar_scores
+    };
+
+    // 准备对话数据
+    const conversationMessages = getValidMessages();
+
+    // 发射评估完成事件
+    emit('evaluation-complete', {
+      evaluationData,
+      conversationData: conversationMessages
+    });
   } catch (error) {
     console.error('评估失败:', error);
     
@@ -1658,6 +1601,16 @@ const generatePDFReport = async () => {
     }
   }
 };
+
+// 错误捕获
+onErrorCaptured((error, instance, info) => {
+  console.error('❌ ChatBoxComponent 捕获到错误:', error);
+  console.error('🔍 错误信息:', info);
+  console.error('📍 错误实例:', instance);
+  
+  // 防止错误继续传播
+  return false;
+});
 
 
 </script>
@@ -2230,5 +2183,35 @@ textarea::-webkit-scrollbar-thumb:hover {
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+/* 评估摘要卡片样式 */
+.evaluation-summary-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.evaluation-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.evaluation-summary-card:hover::before {
+  left: 100%;
+}
+
+/* 按钮样式 */
+.btn-primary {
+  @apply px-4 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium text-white;
+}
+
+.btn-secondary {
+  @apply px-3 py-2 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium;
 }
 </style>

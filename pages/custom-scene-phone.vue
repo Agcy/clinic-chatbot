@@ -36,9 +36,26 @@
         v-if="currentScene"
         :scene="currentScene"
         :is-training="true"
+        :show-evaluation-summary="showEvaluationSummary"
+        :evaluation-summary-data="evaluationSummaryData"
         @training-complete="handleTrainingComplete"
+        @evaluation-complete="handleEvaluationComplete"
+        @show-evaluation-card="handleShowEvaluationCard"
+        @retry-training="handleRetryTraining"
+        @go-home="handleGoHome"
       />
     </div>
+    
+    <!-- 评估卡片组件 -->
+    <EvaluationCard
+      :is-visible="showEvaluationCard"
+      :evaluation-data="evaluationData"
+      :conversation-data="conversationData"
+      @close="handleCloseEvaluationCard"
+      @retry-training="handleRetryTraining"
+      @generate-pdf="handleGeneratePDF"
+      @go-home="handleGoHome"
+    />
     
     <!-- 右上角返回按钮 -->
     <ReturnHomeButton />
@@ -51,6 +68,7 @@ import { useRouter, useRoute } from 'vue-router';
 import CustomScenePhoneLoader from '~/components/CustomScenePhoneLoader.vue';
 import ChatBoxComponent from '~/components/ChatBoxComponent.vue';
 import ReturnHomeButton from '~/components/ReturnHomeButton.vue';
+import EvaluationCard from '~/components/EvaluationCard.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -59,6 +77,15 @@ const route = useRoute();
 const isLoading = ref(true);
 const currentScene = ref(null);
 const isPromptCollapsed = ref(false);
+
+// 评估卡片相关数据
+const showEvaluationCard = ref(false);
+const evaluationData = ref({});
+const conversationData = ref([]);
+
+// 评估摘要相关数据
+const showEvaluationSummary = ref(false);
+const evaluationSummaryData = ref(null);
 
 /**
  * 切换提示卡片的展开/收起状态
@@ -135,6 +162,76 @@ const handleTrainingComplete = () => {
       currentSceneCharacter: window.currentSceneCharacter
     });
   }
+};
+
+/**
+ * 处理评估完成
+ */
+const handleEvaluationComplete = (data) => {
+  console.log('🎯 评估完成，显示评估卡片');
+  console.log('评估数据:', data);
+  
+  evaluationData.value = data.evaluationData;
+  conversationData.value = data.conversationData;
+  showEvaluationCard.value = true;
+};
+
+/**
+ * 显示评估卡片（从摘要点击）
+ */
+const handleShowEvaluationCard = () => {
+  console.log('📊 从摘要打开评估卡片');
+  showEvaluationCard.value = true;
+};
+
+/**
+ * 关闭评估卡片
+ */
+const handleCloseEvaluationCard = () => {
+  console.log('❌ 关闭评估卡片，显示评估摘要');
+  showEvaluationCard.value = false;
+  
+  // 显示评估摘要，但先检查数据是否存在
+  if (evaluationData.value && Object.keys(evaluationData.value).length > 0) {
+    showEvaluationSummary.value = true;
+    evaluationSummaryData.value = {
+      rating: evaluationData.value.rating || 0,
+      message: evaluationData.value.message || '',
+      sbarScores: evaluationData.value.sbarScores || null,
+      reasoning: evaluationData.value.reasoning || ''
+    };
+  } else {
+    console.warn('⚠️ 评估数据为空，无法显示摘要');
+  }
+};
+
+/**
+ * 重新开始训练
+ */
+const handleRetryTraining = () => {
+  console.log('🔄 重新开始训练');
+  showEvaluationCard.value = false;
+  showEvaluationSummary.value = false;
+  evaluationSummaryData.value = null;
+  // 重新加载页面或重置状态
+  window.location.reload();
+};
+
+/**
+ * 生成PDF报告
+ */
+const handleGeneratePDF = () => {
+  console.log('📄 生成PDF报告');
+  // 通过EvaluationCard组件内部的PDF生成功能处理
+  // 这个事件已经在EvaluationCard组件内部处理了
+};
+
+/**
+ * 回到主页
+ */
+const handleGoHome = () => {
+  console.log('🏠 回到主页');
+  router.push('/');
 };
 
 /**
