@@ -147,6 +147,14 @@
         <div v-if="conversationData && conversationData.length > 0" class="conversation-section bg-gray-50 rounded-xl p-4 mb-6">
           <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
             💬 對話記錄
+            <span class="text-xs text-gray-500 font-normal ml-2">
+              （SBAR高亮: 
+              <span class="inline-block w-3 h-3 rounded" style="background-color: rgba(239, 68, 68, 0.3); border: 1px solid rgb(239, 68, 68);"></span> S情況
+              <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(34, 197, 94, 0.3); border: 1px solid rgb(34, 197, 94);"></span> B背景
+              <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(59, 130, 246, 0.3); border: 1px solid rgb(59, 130, 246);"></span> A評估
+              <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(168, 85, 247, 0.3); border: 1px solid rgb(168, 85, 247);"></span> R建議
+              ）
+            </span>
           </h3>
           <div class="conversation-list space-y-3 max-h-64 overflow-y-auto">
             <div 
@@ -163,7 +171,10 @@
                   {{ formatMessageTime(msg.timestamp) }}
                 </span>
               </div>
-              <p class="text-sm text-gray-800 leading-relaxed">{{ msg.text }}</p>
+              <div 
+                class="text-sm text-gray-800 leading-relaxed conversation-text" 
+                v-html="highlightSbarContent(msg.text)"
+              ></div>
             </div>
           </div>
         </div>
@@ -241,6 +252,29 @@
     <div v-if="conversationData && conversationData.length > 0" class="pdf-section">
       <div class="pdf-section-title">💬 對話記錄</div>
       
+      <!-- PDF中的高亮说明 -->
+      <div class="pdf-highlight-legend" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e9ecef;">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #2d3748;">📊 SBAR高亮說明：</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 12px;">
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 16px; height: 16px; background-color: rgba(239, 68, 68, 0.3); border: 1px solid rgb(239, 68, 68); border-radius: 3px; display: inline-block;"></span>
+            <strong>S - 情況描述</strong>
+          </span>
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 16px; height: 16px; background-color: rgba(34, 197, 94, 0.3); border: 1px solid rgb(34, 197, 94); border-radius: 3px; display: inline-block;"></span>
+            <strong>B - 背景收集</strong>
+          </span>
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 16px; height: 16px; background-color: rgba(59, 130, 246, 0.3); border: 1px solid rgb(59, 130, 246); border-radius: 3px; display: inline-block;"></span>
+            <strong>A - 評估分析</strong>
+          </span>
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 16px; height: 16px; background-color: rgba(168, 85, 247, 0.3); border: 1px solid rgb(168, 85, 247); border-radius: 3px; display: inline-block;"></span>
+            <strong>R - 建議方案</strong>
+          </span>
+        </div>
+      </div>
+      
       <div 
         v-for="(msg, index) in conversationData" 
         :key="index"
@@ -248,12 +282,12 @@
         :class="msg.from === 'user' ? 'conversation-user' : 'conversation-ai'"
       >
         <div class="conversation-role">{{ msg.from === 'user' ? '👤 醫生:' : '🤖 病人:' }}</div>
-        <div>{{ msg.text }}</div>
+        <div class="conversation-text-pdf" v-html="highlightSbarContent(msg.text)"></div>
       </div>
     </div>
 
     <div class="pdf-footer">
-      SBAR 醫療對話訓練系統 - 專業醫療溝通能力評估平台
+      CCTS 醫療對話訓練系統 - 專業醫療溝通能力評估平台
     </div>
   </div>
 </template>
@@ -361,6 +395,75 @@ const getSbarFullName = (key) => {
   };
   return names[key] || key;
 };
+
+// SBAR高亮颜色配置
+const getSbarHighlightColor = (key) => {
+  const colors = {
+    'Situation': 'rgba(239, 68, 68, 0.2)', // 红色 - 情况描述
+    'Background': 'rgba(34, 197, 94, 0.2)', // 绿色 - 背景收集  
+    'Assessment': 'rgba(59, 130, 246, 0.2)', // 蓝色 - 评估分析
+    'Recommendation': 'rgba(168, 85, 247, 0.2)' // 紫色 - 建议方案
+  };
+  return colors[key] || 'rgba(156, 163, 175, 0.2)';
+};
+
+const getSbarHighlightBorderColor = (key) => {
+  const colors = {
+    'Situation': 'rgb(239, 68, 68)', // 红色边框
+    'Background': 'rgb(34, 197, 94)', // 绿色边框
+    'Assessment': 'rgb(59, 130, 246)', // 蓝色边框
+    'Recommendation': 'rgb(168, 85, 247)' // 紫色边框
+  };
+  return colors[key] || 'rgb(156, 163, 175)';
+};
+
+// 文本高亮处理函数
+const highlightSbarContent = (text) => {
+  if (!text || !props.evaluationData.sbar_scores) {
+    return text;
+  }
+  
+  let highlightedText = text;
+  
+  // 遍历SBAR四个维度
+  Object.keys(props.evaluationData.sbar_scores).forEach(sbarKey => {
+    const sbarData = props.evaluationData.sbar_scores[sbarKey];
+    
+    // 检查是否有reference数组且不为空
+    if (sbarData.reference && Array.isArray(sbarData.reference) && sbarData.reference.length > 0) {
+      const backgroundColor = getSbarHighlightColor(sbarKey);
+      const borderColor = getSbarHighlightBorderColor(sbarKey);
+      const sbarLabel = getSbarLabel(sbarKey);
+      
+      // 遍历reference数组中的每个文本片段
+      sbarData.reference.forEach(referenceText => {
+        if (referenceText && referenceText.trim()) {
+          // 转义特殊字符用于正则表达式
+          const escapedText = referenceText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          
+          // 创建正则表达式进行匹配（不区分大小写，支持部分匹配）
+          const regex = new RegExp(`(${escapedText})`, 'gi');
+          
+          // 应用高亮样式
+          highlightedText = highlightedText.replace(regex, (match) => {
+            return `<span class="sbar-highlight sbar-${sbarKey.toLowerCase()}" 
+                      style="background-color: ${backgroundColor}; 
+                             border-left: 3px solid ${borderColor}; 
+                             padding: 2px 4px; 
+                             border-radius: 3px; 
+                             position: relative;
+                             font-weight: 500;"
+                      title="SBAR ${sbarLabel}: ${getSbarFullName(sbarKey)}">${match}</span>`;
+          });
+        }
+      });
+    }
+  });
+  
+  return highlightedText;
+};
+
+
 
 const getSbarScoreColor = (score) => {
   if (score >= 8) return 'text-green-600';
@@ -985,6 +1088,77 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* SBAR高亮样式 */
+.conversation-text :deep(.sbar-highlight) {
+  display: inline;
+  margin: 0 1px;
+  transition: all 0.2s ease;
+  cursor: help;
+}
+
+.conversation-text :deep(.sbar-highlight:hover) {
+  transform: scale(1.02);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* SBAR颜色主题 */
+.conversation-text :deep(.sbar-situation) {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-left-color: rgb(239, 68, 68) !important;
+}
+
+.conversation-text :deep(.sbar-background) {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  border-left-color: rgb(34, 197, 94) !important;
+}
+
+.conversation-text :deep(.sbar-assessment) {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border-left-color: rgb(59, 130, 246) !important;
+}
+
+.conversation-text :deep(.sbar-recommendation) {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  border-left-color: rgb(168, 85, 247) !important;
+}
+
+/* PDF文本样式 */
+.conversation-text-pdf {
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* PDF中的SBAR高亮样式 */
+.pdf-preview .conversation-text-pdf .sbar-highlight {
+  display: inline !important;
+  margin: 0 1px !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  font-weight: 500 !important;
+  border-left-width: 3px !important;
+  border-left-style: solid !important;
+}
+
+.pdf-preview .conversation-text-pdf .sbar-situation {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  border-left-color: rgb(239, 68, 68) !important;
+}
+
+.pdf-preview .conversation-text-pdf .sbar-background {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+  border-left-color: rgb(34, 197, 94) !important;
+}
+
+.pdf-preview .conversation-text-pdf .sbar-assessment {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border-left-color: rgb(59, 130, 246) !important;
+}
+
+.pdf-preview .conversation-text-pdf .sbar-recommendation {
+  background-color: rgba(168, 85, 247, 0.2) !important;
+  border-left-color: rgb(168, 85, 247) !important;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .evaluation-card {
@@ -1005,6 +1179,17 @@ onBeforeUnmount(() => {
   .radar-chart-container canvas {
     max-width: 300px;
     max-height: 300px;
+  }
+  
+  /* 移动端高亮图例调整 */
+  .conversation-section h3 span {
+    display: block;
+    margin-top: 8px;
+    font-size: 10px;
+  }
+  
+  .conversation-section h3 span .inline-block {
+    margin: 0 2px;
   }
 }
 </style>

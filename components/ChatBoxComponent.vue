@@ -75,8 +75,10 @@
                 class="flex-1 px-4 py-3 bg-white/70 border border-gray-200/50 rounded-lg shadow-inner focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-sm text-sm resize-none min-h-[3rem]"
                 :disabled="trainingFinished"
                 @input="adjustTextareaHeight"
-                @keydown.enter.exact.prevent="sendMessage"
+                @keydown.enter.exact.prevent="handleEnterKey"
                 @keydown.enter.shift.exact="insertNewline"
+                @compositionstart="onCompositionStart"
+                @compositionend="onCompositionEnd"
                 rows="1"
             ></textarea>
             <button
@@ -273,7 +275,7 @@
     </div>
 
     <div class="pdf-footer">
-      SBAR 醫療對話訓練系統 - 專業醫療溝通能力評估平台
+      CCTS 醫療對話訓練系統 - 專業醫療溝通能力評估平台
     </div>
   </div>
 </template>
@@ -352,6 +354,9 @@ const sbarScores = ref(null); // SBAR各维度评分
 const expandedSbarItems = ref([]); // 展开的SBAR项目
 const currentSceneId = ref(null);
 const typerRefs = ref([]);
+
+// 中文输入法状态管理
+const isComposing = ref(false);
 
 let mediaRecorder;
 let audioChunks = [];
@@ -719,6 +724,32 @@ const scrollToBottom = async () => {
 watch(messages, () => {
   scrollToBottom();
 }, { deep: true });
+
+// 中文输入法事件处理
+const onCompositionStart = () => {
+  isComposing.value = true;
+};
+
+const onCompositionEnd = () => {
+  isComposing.value = false;
+};
+
+// 处理回车键事件
+const handleEnterKey = (event) => {
+  // 如果正在使用中文输入法，则不发送消息
+  if (isComposing.value) {
+    return;
+  }
+  
+  // 检查是否有文本内容
+  if (!userInput.value.trim()) {
+    console.log('📝 输入为空，跳过发送');
+    return;
+  }
+  
+  console.log('⌨️ 回车发送消息:', userInput.value);
+  sendMessage();
+};
 
 const sendMessage = async () => {
   const userMessage = userInput.value.trim();
@@ -2208,10 +2239,49 @@ textarea::-webkit-scrollbar-thumb:hover {
 
 /* 按钮样式 */
 .btn-primary {
-  @apply px-4 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium text-white;
+  padding: 1rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  opacity: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: white;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: scale(1.05);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
-  @apply px-3 py-2 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  opacity: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: scale(1.05);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
