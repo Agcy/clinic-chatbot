@@ -41,6 +41,11 @@ const sceneSchema = new mongoose.Schema({
   config_id: {
     type: String,
     required: false
+  },
+  patient_vitals: {
+    type: Array,
+    required: false,
+    default: []
   }
 });
 
