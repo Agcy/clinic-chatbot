@@ -1,5 +1,5 @@
 /**
- * @fileoverview 聊天框组件 - 使用扣子(Coze)工作流API，包含SBAR雷达图评估
+ * @fileoverview 聊天框组件 - 使用扣子(Coze)工作流API，包含ISBAR雷达图评估
  */
 
 <template>
@@ -137,7 +137,7 @@
                     :disabled="isEvaluating"
                     class="btn-primary bg-gradient-to-r from-blue-500 to-blue-600 h-14 flex-1 min-w-[8rem]"
                 >
-                  📊 {{ isEvaluating ? "SBAR評估中..." : "SBAR評估" }}
+                  📊 {{ isEvaluating ? "ISBAR評估中..." : "ISBAR評估" }}
                 </button>
               </div>
 
@@ -151,7 +151,7 @@
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
                       <span class="text-2xl">📊</span>
-                      <span class="font-semibold text-gray-800">SBAR評估結果</span>
+                      <span class="font-semibold text-gray-800">ISBAR評估結果</span>
                     </div>
                     <div class="flex items-center gap-1 text-purple-600">
                       <span class="text-sm">點擊查看詳情</span>
@@ -175,8 +175,8 @@
                       </div>
                     </div>
                     
-                    <!-- SBAR各维度简要显示 -->
-                    <div v-if="evaluationSummaryData?.sbarScores && Object.keys(evaluationSummaryData.sbarScores).length > 0" class="grid grid-cols-4 gap-2 mt-3">
+                    <!-- ISBAR各维度简要显示 -->
+                    <div v-if="evaluationSummaryData?.sbarScores && Object.keys(evaluationSummaryData.sbarScores).length > 0" class="grid grid-cols-5 gap-2 mt-3">
                       <div 
                         v-for="(dimension, key) in evaluationSummaryData.sbarScores" 
                         :key="key"
@@ -225,7 +225,7 @@
 
   <!-- PDF预览内容（隐藏，用于html2canvas） -->
   <div id="pdf-content" ref="pdfContentRef" class="pdf-preview">
-    <div class="pdf-title">SBAR 醫療對話評估報告</div>
+    <div class="pdf-title">ISBAR 醫療對話評估報告</div>
     
     <div class="pdf-info">
       <div><strong>場景名稱:</strong> {{ getCurrentSceneName() }}</div>
@@ -241,7 +241,7 @@
     </div>
 
     <div v-if="sbarScores" class="pdf-section">
-      <div class="pdf-section-title">🎯 SBAR 各維度詳細評估</div>
+      <div class="pdf-section-title">🎯 ISBAR 各維度詳細評估</div>
       
       <div 
         v-for="(dimension, key) in sbarScores" 
@@ -350,8 +350,8 @@ const evaluationRating = ref(0);
 const evaluationMsg = ref("");
 const evaluationReasoning = ref(""); // 评估理由
 const showReasoning = ref(false); // 控制理由框的展开/折叠
-const sbarScores = ref(null); // SBAR各维度评分
-const expandedSbarItems = ref([]); // 展开的SBAR项目
+const sbarScores = ref(null); // ISBAR各维度评分
+const expandedSbarItems = ref([]); // 展开的ISBAR项目
 const currentSceneId = ref(null);
 const typerRefs = ref([]);
 
@@ -380,9 +380,10 @@ const loadChartJS = async () => {
   });
 };
 
-// SBAR相关辅助函数
+// ISBAR相关辅助函数
 const getSbarLabel = (key) => {
   const labels = {
+    'Introduction': 'I',
     'Situation': 'S',
     'Background': 'B',
     'Assessment': 'A',
@@ -393,6 +394,7 @@ const getSbarLabel = (key) => {
 
 const getSbarFullName = (key) => {
   const names = {
+    'Introduction': '自我介紹',
     'Situation': '情況描述',
     'Background': '背景收集',
     'Assessment': '評估分析',
@@ -408,7 +410,7 @@ const getSbarScoreColor = (score) => {
   return 'text-red-600';
 };
 
-// 获取SBAR评分颜色的十六进制值（用于PDF）
+// 获取ISBAR评分颜色的十六进制值（用于PDF）
 const getSbarScoreColorHex = (score) => {
   if (score >= 8) return '#16a34a'; // green-600
   if (score >= 6) return '#ca8a04'; // yellow-600
@@ -477,7 +479,7 @@ const getCurrentDateTime = () => {
 const getValidMessages = () => {
   return messages.value.filter(msg => 
     msg.text !== "Error: Failed to send message." && 
-    !msg.text.includes("正在進行 SBAR 評估分析")
+    !msg.text.includes("正在進行 ISBAR 評估分析")
   );
 };
 
@@ -518,14 +520,16 @@ const initRadarChart = async () => {
     }
     
     const scores = [
+      sbarScores.value.Introduction?.rank || 0,
       sbarScores.value.Situation?.rank || 0,
       sbarScores.value.Background?.rank || 0,
       sbarScores.value.Assessment?.rank || 0,
       sbarScores.value.Recommendation?.rank || 0
     ];
-    
-    console.log('📊 提取的SBAR评分:', scores);
-    console.log('📊 SBAR数据详情:', {
+
+    console.log('📊 提取的ISBAR评分:', scores);
+    console.log('📊 ISBAR数据详情:', {
+      Introduction: sbarScores.value.Introduction,
       Situation: sbarScores.value.Situation,
       Background: sbarScores.value.Background,
       Assessment: sbarScores.value.Assessment,
@@ -536,9 +540,9 @@ const initRadarChart = async () => {
     radarChart = new Chart(ctx, {
       type: 'radar',
       data: {
-        labels: ['S', 'B', 'A', 'R'],
+        labels: ['I', 'S', 'B', 'A', 'R'],
         datasets: [{
-          label: 'SBAR 評分',
+          label: 'ISBAR 評分',
           data: scores,
           borderColor: 'rgb(74, 144, 226)',
           backgroundColor: 'rgba(74, 144, 226, 0.2)',
@@ -1308,7 +1312,7 @@ const evaluateConversation = async () => {
     // 显示评估进度提示
     const evaluatingMessage = {
       id: Date.now(),
-      text: "🔄 正在進行 SBAR 評估分析，預計需要 1-2 分鐘，請稍候...",
+      text: "🔄 正在進行 ISBAR 評估分析，預計需要 1-2 分鐘，請稍候...",
       from: 'ai'
     };
     messages.value.push(evaluatingMessage);
@@ -1316,7 +1320,7 @@ const evaluateConversation = async () => {
     // 过滤掉错误消息和评估提示消息
     const validMessages = messages.value.filter(msg => 
       msg.text !== "Error: Failed to send message." && 
-      !msg.text.includes("正在進行 SBAR 評估分析")
+      !msg.text.includes("正在進行 ISBAR 評估分析")
     );
 
     // 获取当前场景ID（必须有效）
@@ -1387,7 +1391,7 @@ const evaluateConversation = async () => {
     }
 
     // 移除评估进度提示消息
-    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 SBAR 評估分析"));
+    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 ISBAR 評估分析"));
     if (messageIndex > -1) {
       messages.value.splice(messageIndex, 1);
     }
@@ -1396,11 +1400,11 @@ const evaluateConversation = async () => {
     evaluationRating.value = response.data.rating;
     evaluationMsg.value = response.data.evaluation_msg;
     evaluationReasoning.value = response.data.reasoning || ''; // 保存评估理由
-    sbarScores.value = response.data.sbar_scores || null; // 保存SBAR评分数据
+    sbarScores.value = response.data.sbar_scores || null; // 保存ISBAR评分数据
 
     console.log('评估成功，评分:', response.data.rating, '评估消息:', response.data.evaluation_msg);
     console.log('评估理由:', response.data.reasoning?.substring(0, 100) + '...');
-    console.log('SBAR评分:', response.data.sbar_scores);
+    console.log('ISBAR评分:', response.data.sbar_scores);
 
     // 准备评估数据
     const evaluationData = {
@@ -1422,7 +1426,7 @@ const evaluateConversation = async () => {
     console.error('评估失败:', error);
     
     // 移除评估进度提示消息
-    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 SBAR 評估分析"));
+    const messageIndex = messages.value.findIndex(msg => msg.text.includes("正在進行 ISBAR 評估分析"));
     if (messageIndex > -1) {
       messages.value.splice(messageIndex, 1);
     }
@@ -1614,7 +1618,7 @@ const generatePDFReport = async () => {
     // 生成文件名
     const now = new Date();
     const sceneName = getCurrentSceneName();
-    const fileName = `SBAR評估報告_${sceneName}_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
+    const fileName = `ISBAR評估報告_${sceneName}_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
     
     // 保存PDF
     pdf.save(fileName);
@@ -1966,7 +1970,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* SBAR雷达图样式 */
+/* ISBAR雷达图样式 */
 .radar-chart-container {
   height: 250px;
   display: flex;

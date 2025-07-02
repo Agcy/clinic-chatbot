@@ -22,7 +22,7 @@
       <!-- 卡片头部 -->
       <div class="card-header flex items-center justify-between px-6 py-4 border-b border-gray-200">
         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          🎯 SBAR 訓練評估結果
+          🎯 ISBAR 訓練評估結果
         </h2>
         <button 
           @click="closeCard"
@@ -61,10 +61,10 @@
           </div>
         </div>
         
-        <!-- SBAR雷达图区域 -->
+        <!-- ISBAR雷达图区域 -->
         <div v-if="evaluationData.sbar_scores" class="sbar-section bg-gray-50 rounded-xl p-4 mb-6">
           <h3 class="text-lg font-semibold text-gray-700 mb-4 text-center flex items-center justify-center gap-2">
-            📊 SBAR 能力雷達圖
+            📊 ISBAR 能力雷達圖
           </h3>
           
           <!-- 雷达图容器 -->
@@ -72,10 +72,10 @@
             <canvas ref="radarChartRef" width="350" height="350"></canvas>
           </div>
           
-          <!-- SBAR维度详细评分 -->
+          <!-- ISBAR维度详细评分 -->
           <div class="sbar-details grid grid-cols-1 gap-3">
-            <div 
-              v-for="(dimension, key) in evaluationData.sbar_scores" 
+            <div
+              v-for="(dimension, key) in evaluationData.sbar_scores"
               :key="key"
               class="sbar-item bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
               @click="toggleSbarDetail(key)"
@@ -148,8 +148,9 @@
           <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
             💬 對話記錄
             <span class="text-xs text-gray-500 font-normal ml-2">
-              （SBAR高亮: 
-              <span class="inline-block w-3 h-3 rounded" style="background-color: rgba(239, 68, 68, 0.3); border: 1px solid rgb(239, 68, 68);"></span> S情況
+              （ISBAR高亮:
+              <span class="inline-block w-3 h-3 rounded" style="background-color: rgba(255, 193, 7, 0.3); border: 1px solid rgb(255, 193, 7);"></span> I介紹
+              <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(239, 68, 68, 0.3); border: 1px solid rgb(239, 68, 68);"></span> S情況
               <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(34, 197, 94, 0.3); border: 1px solid rgb(34, 197, 94);"></span> B背景
               <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(59, 130, 246, 0.3); border: 1px solid rgb(59, 130, 246);"></span> A評估
               <span class="inline-block w-3 h-3 rounded ml-1" style="background-color: rgba(168, 85, 247, 0.3); border: 1px solid rgb(168, 85, 247);"></span> R建議
@@ -208,7 +209,7 @@
   
   <!-- PDF预览内容（隐藏，用于生成PDF） -->
   <div id="pdf-content" ref="pdfContentRef" class="pdf-preview">
-    <div class="pdf-title">SBAR 醫療對話評估報告</div>
+    <div class="pdf-title">ISBAR 醫療對話評估報告</div>
     
     <div class="pdf-info">
       <div><strong>場景名稱:</strong> {{ getCurrentSceneName() }}</div>
@@ -224,11 +225,11 @@
     </div>
 
     <div v-if="evaluationData.sbar_scores" class="pdf-section">
-      <div class="pdf-section-title">🎯 SBAR 各維度詳細評估</div>
-      
-      <!-- SBAR雷达图容器 -->
+      <div class="pdf-section-title">🎯 ISBAR 各維度詳細評估</div>
+
+      <!-- ISBAR雷达图容器 -->
       <div class="pdf-radar-chart" style="text-align: center; margin: 20px 0;">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #2d3748;">📊 SBAR 能力雷達圖</div>
+        <div style="font-weight: bold; margin-bottom: 10px; color: #2d3748;">📊 ISBAR 能力雷達圖</div>
         <!-- 雷达图将通过JavaScript动态插入到这里 -->
       </div>
       
@@ -254,8 +255,12 @@
       
       <!-- PDF中的高亮说明 -->
       <div class="pdf-highlight-legend" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e9ecef;">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #2d3748;">📊 SBAR高亮說明：</div>
+        <div style="font-weight: bold; margin-bottom: 10px; color: #2d3748;">📊 ISBAR高亮說明：</div>
         <div style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 12px;">
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 16px; height: 16px; background-color: rgba(255, 193, 7, 0.3); border: 1px solid rgb(255, 193, 7); border-radius: 3px; display: inline-block;"></span>
+            <strong>I - 自我介紹</strong>
+          </span>
           <span style="display: flex; align-items: center; gap: 5px;">
             <span style="width: 16px; height: 16px; background-color: rgba(239, 68, 68, 0.3); border: 1px solid rgb(239, 68, 68); border-radius: 3px; display: inline-block;"></span>
             <strong>S - 情況描述</strong>
@@ -375,9 +380,10 @@ const loadLibraries = async () => {
   }
 };
 
-// SBAR相关辅助函数
+// ISBAR相关辅助函数
 const getSbarLabel = (key) => {
   const labels = {
+    'Introduction': 'I',
     'Situation': 'S',
     'Background': 'B',
     'Assessment': 'A',
@@ -388,6 +394,7 @@ const getSbarLabel = (key) => {
 
 const getSbarFullName = (key) => {
   const names = {
+    'Introduction': '自我介紹',
     'Situation': '情況描述',
     'Background': '背景收集',
     'Assessment': '評估分析',
@@ -396,11 +403,12 @@ const getSbarFullName = (key) => {
   return names[key] || key;
 };
 
-// SBAR高亮颜色配置
+// ISBAR高亮颜色配置
 const getSbarHighlightColor = (key) => {
   const colors = {
+    'Introduction': 'rgba(255, 193, 7, 0.2)', // 黄色 - 自我介绍
     'Situation': 'rgba(239, 68, 68, 0.2)', // 红色 - 情况描述
-    'Background': 'rgba(34, 197, 94, 0.2)', // 绿色 - 背景收集  
+    'Background': 'rgba(34, 197, 94, 0.2)', // 绿色 - 背景收集
     'Assessment': 'rgba(59, 130, 246, 0.2)', // 蓝色 - 评估分析
     'Recommendation': 'rgba(168, 85, 247, 0.2)' // 紫色 - 建议方案
   };
@@ -409,6 +417,7 @@ const getSbarHighlightColor = (key) => {
 
 const getSbarHighlightBorderColor = (key) => {
   const colors = {
+    'Introduction': 'rgb(255, 193, 7)', // 黄色边框
     'Situation': 'rgb(239, 68, 68)', // 红色边框
     'Background': 'rgb(34, 197, 94)', // 绿色边框
     'Assessment': 'rgb(59, 130, 246)', // 蓝色边框
@@ -425,7 +434,7 @@ const highlightSbarContent = (text) => {
   
   let highlightedText = text;
   
-  // 遍历SBAR四个维度
+  // 遍历ISBAR五个维度
   Object.keys(props.evaluationData.sbar_scores).forEach(sbarKey => {
     const sbarData = props.evaluationData.sbar_scores[sbarKey];
     
@@ -453,7 +462,7 @@ const highlightSbarContent = (text) => {
                              border-radius: 3px; 
                              position: relative;
                              font-weight: 500;"
-                      title="SBAR ${sbarLabel}: ${getSbarFullName(sbarKey)}">${match}</span>`;
+                      title="ISBAR ${sbarLabel}: ${getSbarFullName(sbarKey)}">${match}</span>`;
           });
         }
       });
@@ -542,8 +551,9 @@ const initRadarChart = async () => {
     const sbarScores = props.evaluationData.sbar_scores;
     
     // 准备数据
-    const labels = ['S (情況)', 'B (背景)', 'A (評估)', 'R (建議)'];
+    const labels = ['I (介紹)', 'S (情況)', 'B (背景)', 'A (評估)', 'R (建議)'];
     const data = [
+      sbarScores.Introduction?.rank || 0,
       sbarScores.Situation?.rank || 0,
       sbarScores.Background?.rank || 0,
       sbarScores.Assessment?.rank || 0,
@@ -555,7 +565,7 @@ const initRadarChart = async () => {
       data: {
         labels: labels,
         datasets: [{
-          label: 'SBAR 評分',
+          label: 'ISBAR 評分',
           data: data,
           borderColor: 'rgb(59, 130, 246)',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -612,7 +622,7 @@ const initRadarChart = async () => {
   }
 };
 
-// 切换SBAR详情展开/折叠
+// 切换ISBAR详情展开/折叠
 const toggleSbarDetail = (key) => {
   const index = expandedSbarItems.value.indexOf(key);
   if (index > -1) {
@@ -848,13 +858,13 @@ const handleGeneratePDF = async () => {
     // 生成文件名
     const now = new Date();
     const sceneName = getCurrentSceneName();
-    const fileName = `SBAR評估報告_${sceneName}_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
+    const fileName = `ISBAR評估報告_${sceneName}_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
     
     // 保存PDF
     pdf.save(fileName);
     
     console.log('✅ PDF報告生成成功:', fileName);
-    alert('📄 PDF評估報告已成功生成並下載！包含完整的SBAR雷達圖');
+    alert('📄 PDF評估報告已成功生成並下載！包含完整的ISBAR雷達圖');
     
   } catch (error) {
     console.error('❌ 生成PDF報告失敗:', error);
@@ -1088,7 +1098,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* SBAR高亮样式 */
+/* ISBAR高亮样式 */
 .conversation-text :deep(.sbar-highlight) {
   display: inline;
   margin: 0 1px;
@@ -1101,7 +1111,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* SBAR颜色主题 */
+/* ISBAR颜色主题 */
 .conversation-text :deep(.sbar-situation) {
   background-color: rgba(239, 68, 68, 0.15) !important;
   border-left-color: rgb(239, 68, 68) !important;
@@ -1128,7 +1138,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-/* PDF中的SBAR高亮样式 */
+/* PDF中的ISBAR高亮样式 */
 .pdf-preview .conversation-text-pdf .sbar-highlight {
   display: inline !important;
   margin: 0 1px !important;

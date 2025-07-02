@@ -12,7 +12,6 @@ const COZE_API_URL = 'https://api.coze.cn/v1/workflow/run';
 const COZE_API_TOKEN = process.env.COZE_API_TOKEN || 'pat_088HrAHRNL6GWNyG4e0O4K17lDYI2K1D13x1GKolnAANEZDKMlbMm7NV7CLHNyR7';
 const EVALUATION_WORKFLOW_ID = process.env.COZE_WORKFLOW_EVALUATION_ID || '7513826885483282472';
 
-// conversation_id管理已移至 conversation-manager.js
 
 /**
  * 清理markdown格式的JSON字符串
@@ -220,14 +219,14 @@ function forceParseJson(jsonStr) {
       const reasonMatch = str.match(/"reason":\s*"([^"]+)"/);
       if (reasonMatch) result.reason = reasonMatch[1];
       
-      // 尝试提取SBAR_scores（简化版本）
-      const sbarMatch = str.match(/"SBAR_scores":\s*\{([\s\S]*)\}\s*\}/);
+      // 尝试提取ISBAR_scores（简化版本）
+      const sbarMatch = str.match(/"ISBAR_scores":\s*\{([\s\S]*)\}\s*\}/);
       if (sbarMatch) {
         try {
-          // 简化的SBAR解析
-          result.SBAR_scores = {};
-          const dimensions = ['Situation', 'Background', 'Assessment', 'Recommendation'];
-          
+          // 简化的ISBAR解析
+          result.ISBAR_scores = {};
+          const dimensions = ['Introduction', 'Situation', 'Background', 'Assessment', 'Recommendation'];
+
           dimensions.forEach(dim => {
             const dimPattern = new RegExp(`"${dim}":\\s*\\{([^}]+)\\}`, 'g');
             const dimMatch = dimPattern.exec(str);
@@ -235,20 +234,20 @@ function forceParseJson(jsonStr) {
               const dimData = {};
               const rankMatch = dimMatch[1].match(/"rank":\s*(\d+)/);
               if (rankMatch) dimData.rank = parseInt(rankMatch[1]);
-              
+
               const msgMatch = dimMatch[1].match(/"message":\s*"([^"]+)"/);
               if (msgMatch) dimData.message = msgMatch[1];
-              
+
               const reasonMatch = dimMatch[1].match(/"reason":\s*"([^"]+)"/);
               if (reasonMatch) dimData.reason = reasonMatch[1];
-              
+
               if (Object.keys(dimData).length > 0) {
-                result.SBAR_scores[dim] = dimData;
+                result.ISBAR_scores[dim] = dimData;
               }
             }
           });
         } catch (e) {
-          console.log('SBAR手动解析失败:', e.message);
+          console.log('ISBAR手动解析失败:', e.message);
         }
       }
       
@@ -311,7 +310,8 @@ export default defineEventHandler(async (event) => {
       parameters: {
         AI_prompt: sceneData.scene_description_model || "你是一个病人，请根据场景描述进行对话。",
         user_prompt: sceneData.scene_description_charactor || "你是一名医生，请与病人进行专业的医疗对话。",
-        CHAT_RECORD: chatRecord
+        CHAT_RECORD: chatRecord,
+        patient_metrics: sceneData.patient_vitals || "" // 添加病人生命体征数据
       },
       workflow_id: EVALUATION_WORKFLOW_ID
     };
@@ -381,7 +381,7 @@ export default defineEventHandler(async (event) => {
     console.log('扣子评估结果:', evaluationResult);
     console.log('evaluationResult类型:', typeof evaluationResult);
 
-    // 解析扣子返回的新JSON格式: {rank:xx, message:xx, reason:xx, SBAR_scores:xx}
+    // 解析扣子返回的新JSON格式: {rank:xx, message:xx, reason:xx, ISBAR_scores:xx}
     let rating = 7; // 默认评分
     let evaluation_msg = '评估完成';
     let reasoning = ''; // 评估理由
@@ -424,13 +424,13 @@ export default defineEventHandler(async (event) => {
         reasoning = evalData.reason;
       }
 
-      // 解析SBAR评分数据
-      if (evalData.SBAR_scores) {
-        sbar_scores = evalData.SBAR_scores;
-        console.log('✅ 成功解析SBAR评分数据');
-        console.log('🎯 SBAR维度:', Object.keys(sbar_scores));
+      // 解析ISBAR评分数据
+      if (evalData.ISBAR_scores) {
+        sbar_scores = evalData.ISBAR_scores;
+        console.log('✅ 成功解析ISBAR评分数据');
+        console.log('🎯 ISBAR维度:', Object.keys(sbar_scores));
       } else {
-        console.log('⚠️ 未找到SBAR_scores字段');
+        console.log('⚠️ 未找到ISBAR_scores字段');
       }
 
     } catch (parseError) {
@@ -442,40 +442,40 @@ export default defineEventHandler(async (event) => {
       // 如果解析失败，尝试备用方案
       const stringResult = String(evaluationResult);
 
-      // 尝试从字符串中提取完整的JSON（包含SBAR_scores）
-      const fullJsonMatch = stringResult.match(/\{[\s\S]*"SBAR_scores"[\s\S]*\}/);
+      // 尝试从字符串中提取完整的JSON（包含ISBAR_scores）
+      const fullJsonMatch = stringResult.match(/\{[\s\S]*"ISBAR_scores"[\s\S]*\}/);
       if (fullJsonMatch) {
         try {
           console.log('🔍 尝试从匹配的完整JSON片段中解析...');
           // 清理匹配到的JSON字符串
           const cleanedJson = cleanMarkdownJson(fullJsonMatch[0]);
           console.log('🧹 清理后的JSON:', cleanedJson.substring(0, 200) + '...');
-          
+
           const partialData = JSON.parse(cleanedJson);
           if (partialData.rank) rating = parseInt(partialData.rank);
           if (partialData.message) evaluation_msg = partialData.message;
           if (partialData.reason) reasoning = partialData.reason;
-          if (partialData.SBAR_scores) sbar_scores = partialData.SBAR_scores;
+          if (partialData.ISBAR_scores) sbar_scores = partialData.ISBAR_scores;
           console.log('✅ 备用方案成功提取完整数据');
-          console.log('🎯 提取到的SBAR数据:', JSON.stringify(sbar_scores, null, 2));
+          console.log('🎯 提取到的ISBAR数据:', JSON.stringify(sbar_scores, null, 2));
         } catch (e) {
           console.log('❌ 备用JSON解析也失败:', e.message);
           
-          // 最后的备用方案：尝试手动提取SBAR数据
+          // 最后的备用方案：尝试手动提取ISBAR数据
           try {
-            console.log('🔧 尝试手动提取SBAR数据...');
-            const sbarMatch = stringResult.match(/"SBAR_scores":\s*\{[\s\S]*?\}\s*\}/);
+            console.log('🔧 尝试手动提取ISBAR数据...');
+            const sbarMatch = stringResult.match(/"ISBAR_scores":\s*\{[\s\S]*?\}\s*\}/);
             if (sbarMatch) {
               const sbarJsonStr = '{' + sbarMatch[0] + '}';
               const cleanedSbarJson = cleanMarkdownJson(sbarJsonStr);
               const sbarData = JSON.parse(cleanedSbarJson);
-              if (sbarData.SBAR_scores) {
-                sbar_scores = sbarData.SBAR_scores;
-                console.log('✅ 手动提取SBAR数据成功');
+              if (sbarData.ISBAR_scores) {
+                sbar_scores = sbarData.ISBAR_scores;
+                console.log('✅ 手动提取ISBAR数据成功');
               }
             }
           } catch (manualError) {
-            console.log('❌ 手动提取SBAR数据也失败:', manualError.message);
+            console.log('❌ 手动提取ISBAR数据也失败:', manualError.message);
           }
           
           // 尝试简单的JSON匹配
@@ -515,10 +515,10 @@ export default defineEventHandler(async (event) => {
     console.log('- 评分:', rating);
     console.log('- 评估消息长度:', evaluation_msg.length);
     console.log('- 评估理由长度:', reasoning.length);
-    console.log('- SBAR数据:', sbar_scores ? '已获取' : '未获取');
+    console.log('- ISBAR数据:', sbar_scores ? '已获取' : '未获取');
     if (sbar_scores) {
-      console.log('- SBAR维度数量:', Object.keys(sbar_scores).length);
-      console.log('- SBAR维度:', Object.keys(sbar_scores));
+      console.log('- ISBAR维度数量:', Object.keys(sbar_scores).length);
+      console.log('- ISBAR维度:', Object.keys(sbar_scores));
     }
 
     // 保存评估结果到数据库

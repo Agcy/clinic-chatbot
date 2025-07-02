@@ -48,7 +48,7 @@ const conversationSchema = new mongoose.Schema({
     default: null
   },
   sbar_scores: {
-    type: mongoose.Schema.Types.Mixed, // 存储SBAR评分的复杂对象
+    type: mongoose.Schema.Types.Mixed, // 存储ISBAR评分的复杂对象
     default: null
   },
   createdAt: {
