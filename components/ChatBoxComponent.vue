@@ -39,6 +39,12 @@
                   <span class="waiting-dots">准备中</span>
                   <span class="waiting-animation">...</span>
                 </div>
+
+                <!-- 音频播放中，等待文本显示 -->
+                <div v-else-if="msg.waitingForText" class="waiting-text-indicator text-blue-400 italic">
+                  <span class="waiting-dots">🎵 语音播放中</span>
+                  <span class="waiting-animation">...</span>
+                </div>
                 
                 <!-- 打字机效果 -->
                 <div v-else-if="msg.showTypewriter" class="typewriter-container">
@@ -457,9 +463,11 @@ const onTypewriterFinished = (msg) => {
   msg.showTypewriter = false;
   msg.isThinking = false;
   msg.waitingForAudio = false;
-  
+  msg.waitingForText = false;
+
   // 清理动态属性
   delete msg.typeSpeed;
+  delete msg.audioDuration;
 };
 
 // 打字机正在打字回调
@@ -839,6 +847,7 @@ const sendMessage = async () => {
       messages.value[thinkingIndex].isThinking = false;
       messages.value[thinkingIndex].showTypewriter = false; // 先不显示打字机
       messages.value[thinkingIndex].waitingForAudio = true; // 等待音频
+      messages.value[thinkingIndex].waitingForText = false; // 还未到文本显示阶段
       targetMessage = messages.value[thinkingIndex];
     } else {
       // 如果没找到thinking消息，直接添加新消息（备用方案）
@@ -848,105 +857,187 @@ const sendMessage = async () => {
         from: 'ai',
         isThinking: false,
         showTypewriter: false, // 先不显示打字机
-        waitingForAudio: true // 等待音频
+        waitingForAudio: true, // 等待音频
+        waitingForText: false // 还未到文本显示阶段
       };
       messages.value.push(aiMessage);
       targetMessage = aiMessage;
     }
 
-    // 转换AI回复为语音并播放，在语音开始播放时控制角色动画
+    // 转换AI回复为语音并播放，实现文本与语音同步
     try {
       // 获取预加载的角色信息（无需异步调用）
       const currentCharacter = getCurrentSceneCharacter();
       const characterName = currentCharacter.name;
 
-      // console.log('开始生成语音...');
+      console.log('🎵 开始生成语音...');
       // 调用新的Edge TTS API，传入角色名称
-      const speechResponse = await axios.post("/api/text-to-speech", { 
+      const speechResponse = await axios.post("/api/text-to-speech", {
         text: reply,
         characterName: characterName
       });
-      
+
       if (!speechResponse.data.success) {
         throw new Error(speechResponse.data.error || '语音生成失败');
       }
 
-    const audioContent = speechResponse.data.audioContent;
-      // console.log(`语音生成完成，使用音色: ${speechResponse.data.voice}`);
+      const audioContent = speechResponse.data.audioContent;
+      console.log(`✅ 语音生成完成，使用音色: ${speechResponse.data.voice}`);
 
       // 创建音频对象
-    const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-      
-        // 监听音频开始播放，启动说话动画和打字机效果
-        audio.addEventListener('play', () => {
-          if (window.playTalkAnimation) {
-            window.playTalkAnimation(true);
-            // console.log('语音开始播放，启动说话动画');
-          }
-          
-          // 启动打字机效果，与语音同步
-          if (targetMessage && targetMessage.waitingForAudio) {
-            targetMessage.waitingForAudio = false;
-            targetMessage.showTypewriter = true;
-            
-            // 根据文本长度和音频时长计算打字速度
-            const textLength = reply.length;
-            // 估算音频时长（中文大约每秒3-4个字符）
-            const estimatedDuration = textLength / 3.5 * 1000; // 毫秒
-            const typeSpeed = Math.max(30, Math.min(150, estimatedDuration / textLength)); // 限制在30-150ms之间
-            
-            targetMessage.typeSpeed = Math.round(typeSpeed);
-            console.log(`🎯 文本长度: ${textLength}, 估算时长: ${estimatedDuration}ms, 打字速度: ${typeSpeed}ms/字符`);
-          }
-        });
+      const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mp3' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+
+      // 设置音频加载完成后的处理
+      audio.addEventListener('loadedmetadata', () => {
+        const audioDuration = audio.duration * 1000; // 转换为毫秒
+        console.log(`🎵 音频时长: ${audioDuration}ms`);
+
+        // 存储音频时长到消息对象中，供后续使用
+        if (targetMessage) {
+          targetMessage.audioDuration = audioDuration;
+        }
+      });
+
+      // 监听音频开始播放，启动说话动画
+      audio.addEventListener('play', () => {
+        if (window.playTalkAnimation) {
+          window.playTalkAnimation(true);
+          console.log('🎭 语音开始播放，启动说话动画');
+        }
+
+        // 实现延迟显示文本的逻辑
+        if (targetMessage && targetMessage.waitingForAudio) {
+          // 切换到等待文本显示状态
+          targetMessage.waitingForAudio = false;
+          targetMessage.waitingForText = true;
+
+          const textLength = reply.length;
+          const audioDuration = targetMessage.audioDuration || (textLength / 3.5 * 1000); // 使用实际时长或估算
+
+          // 设置延迟时间（2-5秒，根据文本长度动态调整）
+          const delayTime = Math.min(5000, Math.max(2000, Math.min(textLength * 30, 4000))); // 2-5秒之间
+          console.log(`⏰ 文本将在 ${delayTime}ms 后开始显示`);
+
+          // 延迟后开始显示文本
+          setTimeout(() => {
+            if (targetMessage && targetMessage.waitingForText) {
+              targetMessage.waitingForText = false;
+              targetMessage.showTypewriter = true;
+
+              // 计算剩余的音频播放时间
+              const currentTime = audio.currentTime * 1000; // 当前播放位置（毫秒）
+              const remainingTime = Math.max(1000, audioDuration - currentTime); // 剩余播放时间，至少1秒
+
+              // 根据剩余时间和文本长度计算打字速度，确保文本和语音同时结束
+              const typeSpeed = Math.max(30, Math.min(200, remainingTime / textLength));
+
+              targetMessage.typeSpeed = Math.round(typeSpeed);
+              console.log(`🎯 文本长度: ${textLength}, 音频总时长: ${audioDuration}ms, 延迟: ${delayTime}ms, 剩余时间: ${remainingTime}ms, 打字速度: ${typeSpeed}ms/字符`);
+            }
+          }, delayTime);
+        }
+      });
 
         // 监听音频播放结束，停止说话动画
         audio.addEventListener('ended', () => {
           if (window.playTalkAnimation) {
             window.playTalkAnimation(false);
-            // console.log('语音播放结束，停止说话动画');
+            console.log('🎭 语音播放结束，停止说话动画');
           }
           URL.revokeObjectURL(audioUrl); // 清理URL对象
+
+          // 确保文本显示完成
+          if (targetMessage && targetMessage.showTypewriter) {
+            console.log('🎯 音频播放结束，确保文本显示完成');
+          }
         });
 
-        // 监听音频播放错误
+        // 监听音频播放错误，实现fallback机制
         audio.addEventListener('error', (e) => {
-          console.error('音频播放失败:', e);
+          console.error('❌ 音频播放失败:', e);
           if (window.playTalkAnimation) {
             window.playTalkAnimation(false);
-            // console.log('音频播放失败，停止说话动画');
+            console.log('🎭 音频播放失败，停止说话动画');
           }
           URL.revokeObjectURL(audioUrl);
+
+          // Fallback: 如果音频播放失败，立即显示文本
+          if (targetMessage && (targetMessage.waitingForAudio || targetMessage.waitingForText)) {
+            targetMessage.waitingForAudio = false;
+            targetMessage.waitingForText = false;
+            targetMessage.showTypewriter = true;
+            targetMessage.typeSpeed = 80; // 使用默认速度
+            console.log('🔄 音频播放失败，立即显示文本');
+          }
         });
 
         // 监听音频暂停（以防万一）
         audio.addEventListener('pause', () => {
           if (window.playTalkAnimation) {
             window.playTalkAnimation(false);
-            // console.log('语音播放暂停，停止说话动画');
+            console.log('⏸️ 语音播放暂停，停止说话动画');
           }
         });
 
+        // 监听音频加载错误
+        audio.addEventListener('loadstart', () => {
+          console.log('🎵 开始加载音频...');
+        });
+
+        audio.addEventListener('canplay', () => {
+          console.log('✅ 音频可以播放');
+        });
+
         // 开始播放音频（此时会触发play事件，启动动画）
-        // console.log('准备播放语音...');
-    audio.play();
+        console.log('🎵 准备播放语音...');
+
+        // 设置播放超时，防止音频加载过久
+        const playTimeout = setTimeout(() => {
+          console.warn('⚠️ 音频播放超时，使用fallback机制');
+          if (targetMessage && (targetMessage.waitingForAudio || targetMessage.waitingForText)) {
+            targetMessage.waitingForAudio = false;
+            targetMessage.waitingForText = false;
+            targetMessage.showTypewriter = true;
+            targetMessage.typeSpeed = 80;
+            console.log('🔄 播放超时，立即显示文本');
+          }
+        }, 10000); // 10秒超时
+
+        // 播放音频
+        audio.play().then(() => {
+          clearTimeout(playTimeout);
+          console.log('✅ 音频开始播放');
+        }).catch((playError) => {
+          clearTimeout(playTimeout);
+          console.error('❌ 音频播放失败:', playError);
+          // Fallback: 播放失败时立即显示文本
+          if (targetMessage && (targetMessage.waitingForAudio || targetMessage.waitingForText)) {
+            targetMessage.waitingForAudio = false;
+            targetMessage.waitingForText = false;
+            targetMessage.showTypewriter = true;
+            targetMessage.typeSpeed = 80;
+            console.log('🔄 播放失败，立即显示文本');
+          }
+        });
+
     } catch (ttsError) {
-      console.error('TTS处理失败:', ttsError);
+      console.error('❌ TTS处理失败:', ttsError);
       // TTS失败时，直接显示打字机效果（不等待音频）
-      if (targetMessage && targetMessage.waitingForAudio) {
+      if (targetMessage && (targetMessage.waitingForAudio || targetMessage.waitingForText)) {
         targetMessage.waitingForAudio = false;
+        targetMessage.waitingForText = false;
         targetMessage.showTypewriter = true;
         targetMessage.typeSpeed = 80; // 使用默认速度
-        console.log('🔊 TTS失败，使用默认打字机效果');
+        console.log('🔄 TTS失败，使用默认打字机效果');
       }
     }
   } catch (error) {
     console.error('Error sending message:', error);
     
-    // 清除thinking状态和等待音频状态
-    const thinkingIndex = messages.value.findIndex(msg => msg.isThinking || msg.waitingForAudio);
+    // 清除thinking状态和等待状态
+    const thinkingIndex = messages.value.findIndex(msg => msg.isThinking || msg.waitingForAudio || msg.waitingForText);
     if (thinkingIndex !== -1) {
       messages.value.splice(thinkingIndex, 1);
     }
@@ -2187,6 +2278,34 @@ textarea::-webkit-scrollbar-thumb:hover {
   }
   30% {
     opacity: 0.8;
+  }
+}
+
+/* 等待文本显示状态样式 */
+.waiting-text-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #3b82f6 !important; /* 蓝色 */
+}
+
+.waiting-text-indicator .waiting-dots {
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.waiting-text-indicator .waiting-animation {
+  animation: audio-playing-pulse 1s ease-in-out infinite;
+}
+
+@keyframes audio-playing-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
   }
 }
 
