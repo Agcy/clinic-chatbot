@@ -4,6 +4,27 @@
 
 import { Scene } from '../models/scene.js';
 import { connectDB } from '../config/db.js';
+import { getImageUrl } from '../utils/cos-url.js';
+
+/**
+ * 转换场景的图片路径为COS URL
+ * @param {Object} scene - 场景对象
+ * @returns {Object} 转换后的场景对象
+ */
+const transformSceneImageUrl = (scene) => {
+    if (scene.card_img && typeof scene.card_img === 'string') {
+        // 如果是本地路径（以/img/开头），转换为COS URL
+        if (scene.card_img.startsWith('/img/')) {
+            const imageName = scene.card_img.replace('/img/', '');
+            scene.card_img = getImageUrl(imageName);
+        } else if (!scene.card_img.startsWith('http')) {
+            // 如果不是HTTP URL，也尝试转换
+            const imageName = scene.card_img.replace(/^\/+/, ''); // 移除开头的斜杠
+            scene.card_img = getImageUrl(imageName);
+        }
+    }
+    return scene;
+};
 
 export default defineEventHandler(async (event) => {
     const method = getMethod(event);
@@ -15,10 +36,16 @@ export default defineEventHandler(async (event) => {
         if (method === 'GET') {
             // 获取所有场景列表
             const scenes = await Scene.find({});
+            
+            // 转换所有场景的图片URL
+            const transformedScenes = scenes.map(scene => {
+                const sceneObj = scene.toObject ? scene.toObject() : scene;
+                return transformSceneImageUrl(sceneObj);
+            });
 
             return {
                 success: true,
-                scenes
+                scenes: transformedScenes
             };
         } else if (method === 'POST') {
             // 获取特定场景的详细信息
@@ -34,9 +61,13 @@ export default defineEventHandler(async (event) => {
                 return { error: '未找到指定场景' };
             }
 
+            // 转换场景的图片URL
+            const sceneObj = scene.toObject ? scene.toObject() : scene;
+            const transformedScene = transformSceneImageUrl(sceneObj);
+
             return {
                 success: true,
-                scene
+                scene: transformedScene
             };
         } else if (method === 'DELETE') {
             // 删除指定场景

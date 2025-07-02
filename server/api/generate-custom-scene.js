@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import { Scene } from '../models/scene';
 import { connectDB, getConnectionStatus } from '../utils/db';
 import { cleanMarkdownJson } from '../utils/openai-helpers';
+import { getImageUrl } from '../utils/cos-url';
 
 dotenv.config();
 
@@ -121,7 +122,7 @@ export default defineEventHandler(async (event) => {
     // 构建完整的场景数据
     const completeSceneData = {
       scene_id: uniqueSceneId,
-      card_img: "/assets/img.png",
+      card_img: getImageUrl("default_custom_scene.png"), // 使用COS URL
       ...sceneData,
       scene_type: scene_type,
       model_charactor: modelCharacter,

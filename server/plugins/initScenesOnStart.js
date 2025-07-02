@@ -7,8 +7,29 @@ import { Scene } from '~/server/models/scene.js';
 import { ScenePosition } from '~/server/models/scenePosition.js';
 import { Character } from '~/server/models/character.js';
 import { connectDB } from '~/server/utils/db.js';
+import { getImageUrl } from '~/server/utils/cos-url.js';
 import fs from 'fs';
 import path from 'path';
+
+/**
+ * 转换场景的图片路径为COS URL
+ * @param {Object} sceneData - 场景数据对象
+ * @returns {Object} 转换后的场景数据对象
+ */
+const transformSceneImageUrl = (sceneData) => {
+  if (sceneData.card_img && typeof sceneData.card_img === 'string') {
+    // 如果是本地路径（以/img/开头），转换为COS URL
+    if (sceneData.card_img.startsWith('/img/')) {
+      const imageName = sceneData.card_img.replace('/img/', '');
+      sceneData.card_img = getImageUrl(imageName);
+    } else if (!sceneData.card_img.startsWith('http')) {
+      // 如果不是HTTP URL，也尝试转换
+      const imageName = sceneData.card_img.replace(/^\/+/, ''); // 移除开头的斜杠
+      sceneData.card_img = getImageUrl(imageName);
+    }
+  }
+  return sceneData;
+};
 
 export default defineNitroPlugin(async (nitroApp) => {
   try {
@@ -56,10 +77,13 @@ export default defineNitroPlugin(async (nitroApp) => {
             continue;
           }
           const configIdToUse = sceneCard.config_id;
+          
+          // 转换图片URL为COS URL
+          const transformedSceneCard = transformSceneImageUrl({ ...sceneCard });
 
           await Scene.findOneAndUpdate(
             { scene_id: sceneCard.scene_id },
-            { ...sceneCard, config_id: configIdToUse, updated_at: new Date() },
+            { ...transformedSceneCard, config_id: configIdToUse, updated_at: new Date() },
             { upsert: true, new: true, setDefaultsOnInsert: true }
           );
           sceneCardCount++;

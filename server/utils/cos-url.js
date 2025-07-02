@@ -21,4 +21,13 @@ export const getCosUrl = (path) => {
  */
 export const getModelUrl = (modelName) => {
   return getCosUrl(`${cosConfig.ModelPath}/${modelName}`);
+};
+
+/**
+ * 生成图片的COS URL
+ * @param {string} imageName - 图片文件名，例如：'brain_surgery_001.png'
+ * @returns {string} 完整的图片COS URL
+ */
+export const getImageUrl = (imageName) => {
+  return getCosUrl(`${cosConfig.ImagePath}/${imageName}`);
 }; 
