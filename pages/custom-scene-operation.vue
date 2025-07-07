@@ -13,22 +13,20 @@
       </div>
     </div>
     
-    <!-- 左侧提示卡片 -->
-    <div class="prompt-card-container" :class="{ 'collapsed': isCardCollapsed }">
-      <div class="prompt-card">
-        <div class="prompt-card-header" @click="toggleCard">
-          <h3 class="prompt-card-title">角色提示</h3>
-          <span class="prompt-card-toggle">
-            {{ isCardCollapsed ? '展開 ▼' : '收起 ▲' }}
-          </span>
-        </div>
-        <div class="prompt-card-content" v-if="!isCardCollapsed">
-          <div class="prompt-card-role">您的角色: <span>{{ currentScene?.trainee_character || '醫生' }}</span></div>
-          <div class="prompt-card-description">
-            {{ currentScene?.scene_description_charactor || '加載中...' }}
-          </div>
-        </div>
-      </div>
+    <!-- 左侧卡片区域 -->
+    <div class="left-cards-container">
+      <!-- 角色提示卡片 -->
+      <RolePromptCard
+        :role-character="currentScene?.trainee_character || '醫生'"
+        :role-description="currentScene?.scene_description_charactor || '加載中...'"
+        :initial-collapsed="false"
+      />
+      
+      <!-- 病人体征监测卡片 -->
+      <PatientVitalsCard
+        :vitals-data="currentScene?.patient_vitals || []"
+        :initial-collapsed="false"
+      />
     </div>
     
     <ChatBoxComponent 
@@ -63,11 +61,12 @@ import ChatBoxComponent from "@/components/ChatBoxComponent.vue";
 import CustomSceneLoader from "@/components/CustomSceneLoader.vue";
 import ReturnHomeButton from "@/components/ReturnHomeButton.vue";
 import EvaluationCard from "@/components/EvaluationCard.vue";
+import RolePromptCard from "@/components/RolePromptCard.vue";
+import PatientVitalsCard from "@/components/PatientVitalsCard.vue";
 
 const router = useRouter();
 const route = useRoute();
 const currentScene = ref(null);
-const isCardCollapsed = ref(false);
 const sceneId = ref(null);
 
 // 评估卡片相关数据
@@ -78,11 +77,6 @@ const conversationData = ref([]);
 // 评估摘要相关数据
 const showEvaluationSummary = ref(false);
 const evaluationSummaryData = ref(null);
-
-// 切换提示卡片的展开/收起状态
-const toggleCard = () => {
-  isCardCollapsed.value = !isCardCollapsed.value;
-};
 
 /**
  * 处理评估完成
@@ -194,69 +188,39 @@ onMounted(() => {
   z-index: 1;
 }
 
-.prompt-card-container {
+.left-cards-container {
   position: fixed;
   top: 20px;
   left: 20px;
-  width: 350px;
+  bottom: 40px;
+  width: 360px;
   z-index: 100;
-  transition: all 0.3s ease;
-}
-
-.prompt-card-container.collapsed {
-  width: 180px;
-}
-
-.prompt-card {
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  max-width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.prompt-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: rgba(66, 153, 225, 0.9);
-  color: white;
-  cursor: pointer;
-  user-select: none;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  padding-bottom: 20px;
 }
 
-.prompt-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
+.left-cards-container::-webkit-scrollbar {
+  width: 6px;
 }
 
-.prompt-card-toggle {
-  font-size: 14px;
+.left-cards-container::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.3);
+  border-radius: 3px;
 }
 
-.prompt-card-content {
-  padding: 16px;
+.left-cards-container::-webkit-scrollbar-thumb {
+  background: rgba(45, 55, 72, 0.4);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
 }
 
-.prompt-card-role {
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #4a5568;
-}
-
-.prompt-card-role span {
-  color: #2b6cb0;
-}
-
-.prompt-card-description {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #4a5568;
-  white-space: pre-wrap;
+.left-cards-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 55, 72, 0.6);
 }
 
 .loading-scene {
@@ -282,5 +246,40 @@ onMounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* 響應式設計 */
+@media (max-width: 1200px) {
+  .left-cards-container {
+    width: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-cards-container {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 50vh;
+    width: auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    gap: 8px;
+  }
+  
+  .loading-scene p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .left-cards-container {
+    bottom: 55vh;
+    gap: 6px;
+  }
 }
 </style> 

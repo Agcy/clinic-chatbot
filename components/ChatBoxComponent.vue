@@ -1341,6 +1341,11 @@ const sendAudioData = async (audioData, isLast) => {
         // console.log('🎯 识别结果:', result);
         userInput.value = result;
         
+        // 手动调用文本框高度调整，确保语音识别结果能自动调整文本框高度
+        nextTick(() => {
+          adjustTextareaHeight();
+        });
+        
         // 只显示在文本框中，不自动发送
       }
     }

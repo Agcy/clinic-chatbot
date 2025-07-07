@@ -3,7 +3,7 @@
   <div class="chat-container">
     <!-- 3D场景背景 -->
     <div class="scene-background">
-      <CustomScenePhoneLoader />
+      <CustomScenePhoneLoader :scene-id="sceneId" />
     </div>
     
     <!-- 加载状态 -->
@@ -12,22 +12,20 @@
       <p>正在加载电话场景...</p>
     </div>
     
-    <!-- 左上角场景提示卡片 -->
-    <div class="prompt-card-container" :class="{ collapsed: isPromptCollapsed }">
-      <div class="prompt-card">
-        <div class="prompt-card-header" @click="togglePromptCard">
-          <h3 class="prompt-card-title">{{ isPromptCollapsed ? '场景信息' : '电话场景训练' }}</h3>
-          <span class="prompt-card-toggle">{{ isPromptCollapsed ? '▼' : '▲' }}</span>
-        </div>
-        <div v-if="!isPromptCollapsed" class="prompt-card-content">
-          <div class="prompt-card-role">
-            <span>您的角色:</span> {{ currentScene?.trainee_character || '医生' }}
-          </div>
-          <div class="prompt-card-description">
-            {{ currentScene?.scene_description_charactor || '在这个电话场景中，您需要与患者或同事进行电话沟通。请根据情况做出适当的回应。' }}
-          </div>
-        </div>
-      </div>
+    <!-- 左侧卡片区域 -->
+    <div class="left-cards-container">
+      <!-- 角色提示卡片 -->
+      <RolePromptCard
+        :role-character="currentScene?.trainee_character || '医生'"
+        :role-description="currentScene?.scene_description_charactor || '在这个电话场景中，您需要与患者或同事进行电话沟通。请根据情况做出适当的回应。'"
+        :initial-collapsed="false"
+      />
+      
+      <!-- 病人体征监测卡片 -->
+      <PatientVitalsCard
+        :vitals-data="currentScene?.patient_vitals || []"
+        :initial-collapsed="false"
+      />
     </div>
     
     <!-- 右下角聊天框 -->
@@ -69,6 +67,8 @@ import CustomScenePhoneLoader from '~/components/CustomScenePhoneLoader.vue';
 import ChatBoxComponent from '~/components/ChatBoxComponent.vue';
 import ReturnHomeButton from '~/components/ReturnHomeButton.vue';
 import EvaluationCard from '~/components/EvaluationCard.vue';
+import RolePromptCard from "@/components/RolePromptCard.vue";
+import PatientVitalsCard from "@/components/PatientVitalsCard.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -76,7 +76,7 @@ const route = useRoute();
 // 响应式数据
 const isLoading = ref(true);
 const currentScene = ref(null);
-const isPromptCollapsed = ref(false);
+const sceneId = ref('brain_surgery_003'); // 默认场景ID
 
 // 评估卡片相关数据
 const showEvaluationCard = ref(false);
@@ -86,13 +86,6 @@ const conversationData = ref([]);
 // 评估摘要相关数据
 const showEvaluationSummary = ref(false);
 const evaluationSummaryData = ref(null);
-
-/**
- * 切换提示卡片的展开/收起状态
- */
-const togglePromptCard = () => {
-  isPromptCollapsed.value = !isPromptCollapsed.value;
-};
 
 /**
  * 初始化场景数据
@@ -112,9 +105,10 @@ const initializeScene = () => {
   }
   
   // 从URL参数获取scene_id（备用）
-  const sceneId = route.query.scene_id;
-  if (sceneId && !currentScene.value) {
-    console.log('🔍 从URL参数获取scene_id:', sceneId);
+  const urlSceneId = route.query.scene_id;
+  if (urlSceneId) {
+    console.log('🔍 从URL参数获取scene_id:', urlSceneId);
+    sceneId.value = urlSceneId;
     // 可以在这里添加API调用来获取场景数据
   }
   
@@ -125,7 +119,8 @@ const initializeScene = () => {
       scene_id: 'brain_surgery_003',
       scene_title: '脑外科电话咨询',
       trainee_character: '脑外科医生',
-      scene_description_charactor: '您是一名经验丰富的脑外科医生，正在接听患者或同事的电话咨询。请根据对方的问题给出专业的医疗建议。'
+      scene_description_charactor: '您是一名经验丰富的脑外科医生，正在接听患者或同事的电话咨询。请根据对方的问题给出专业的医疗建议。',
+      patient_vitals: []
     };
   }
   
@@ -313,80 +308,39 @@ useHead({
   100% { transform: rotate(360deg); }
 }
 
-.prompt-card-container {
-  position: absolute;
+.left-cards-container {
+  position: fixed;
   top: 20px;
   left: 20px;
-  z-index: 20;
-  width: 300px;
-  transition: all 0.3s ease;
-}
-
-.prompt-card-container.collapsed {
-  width: 200px;
-}
-
-.prompt-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  overflow: hidden;
-}
-
-.prompt-card-header {
-  padding: 15px 20px;
-  background: rgba(66, 153, 225, 0.9);
-  color: white;
-  cursor: pointer;
+  bottom: 40px;
+  width: 360px;
+  z-index: 100;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  user-select: none;
-  transition: background-color 0.3s ease;
-}
-
-.prompt-card-header:hover {
-  background: rgba(66, 153, 225, 1);
-}
-
-.prompt-card-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.prompt-card-toggle {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.prompt-card-content {
-  padding: 20px;
-  max-height: 400px;
+  flex-direction: column;
+  gap: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  padding-bottom: 20px;
 }
 
-.prompt-card-role {
-  margin-bottom: 15px;
-  font-size: 14px;
-  color: #2d3748;
+.left-cards-container::-webkit-scrollbar {
+  width: 6px;
 }
 
-.prompt-card-role span {
-  font-weight: 600;
-  color: #2b6cb0;
+.left-cards-container::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.3);
+  border-radius: 3px;
 }
 
-.prompt-card-description {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #4a5568;
-  background: #f7fafc;
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 4px solid #4299e1;
+.left-cards-container::-webkit-scrollbar-thumb {
+  background: rgba(45, 55, 72, 0.4);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.left-cards-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 55, 72, 0.6);
 }
 
 .chat-box-container {
@@ -398,18 +352,27 @@ useHead({
   max-width: calc(100vw - 40px);
 }
 
+/* 響應式設計 */
+@media (max-width: 1200px) {
+  .left-cards-container {
+    width: 300px;
+  }
+}
 
-
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .prompt-card-container {
-    width: 250px;
+  .left-cards-container {
+    position: fixed;
     top: 10px;
     left: 10px;
-  }
-  
-  .prompt-card-container.collapsed {
-    width: 180px;
+    right: 10px;
+    bottom: 50vh;
+    width: auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    gap: 8px;
   }
   
   .chat-box-container {
@@ -417,17 +380,16 @@ useHead({
     bottom: 10px;
     right: 10px;
   }
+  
+  .loading-scene p {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 480px) {
-  .prompt-card-container {
-    width: calc(100vw - 20px);
-    top: 10px;
-    left: 10px;
-  }
-  
-  .prompt-card-container.collapsed {
-    width: 200px;
+  .left-cards-container {
+    bottom: 55vh;
+    gap: 6px;
   }
   
   .chat-box-container {
@@ -435,7 +397,5 @@ useHead({
     bottom: 10px;
     right: 10px;
   }
-  
-
 }
 </style> 

@@ -38,18 +38,21 @@ let sceneObj, doctorCharacter;
 let isSceneReady = false;
 let currentCharacterInfo = null;
 
-// 自定义场景配置（硬编码，针对brain_surgery_002场景）
+// 自定义场景配置（硬编码，针对woman-operation-room-with-doctor场景）
 const customSceneConfig = {
+  "configId": "woman-operation-room-with-doctor",
+  "name": "女病人手术进行场景",
+  "description": "",
   "sceneModel": {
-    "url": "https://ccts-1312877935.cos.ap-hongkong.myqcloud.com/model/operating_room_with_woman.glb",
+    "url": "https://ccts-1312877935.cos.ap-hongkong.myqcloud.com/model/operating_room_2.glb",
     "position": {
-      "x": 0,
-      "y": -0.9,
-      "z": 0.4
+      "x": -0.4,
+      "y": -0.7,
+      "z": 1.1
     },
     "rotation": {
       "x": 0,
-      "y": -85,
+      "y": -1.3962634015954636,
       "z": 0
     },
     "scale": {
@@ -61,13 +64,13 @@ const customSceneConfig = {
   "characterModel": {
     "url": "https://ccts-1312877935.cos.ap-hongkong.myqcloud.com/model/doctor.glb",
     "position": {
-      "x": 0.7,
-      "y": -0.9,
-      "z": -0.3
+      "x": -0.4,
+      "y": -0.6,
+      "z": 0.4
     },
     "rotation": {
       "x": 0,
-      "y": 5,
+      "y": 0.29670597283903605,
       "z": 0
     },
     "scale": {
@@ -79,7 +82,7 @@ const customSceneConfig = {
   "camera": {
     "position": {
       "x": 0,
-      "y": 0.7,
+      "y": 0.6999999999999996,
       "z": 2
     },
     "lookAt": {
@@ -119,7 +122,7 @@ const customSceneConfig = {
   },
   "background": {
     "type": "color",
-    "value": "#87CEEB"
+    "value": "#87ceeb"
   },
   "renderer": {
     "toneMappingExposure": 0.4,
@@ -297,7 +300,7 @@ const isFbxFormat = (url) => {
 };
 
 /**
- * 加载3D场景（包含woman的手术室）
+ * 加载3D场景（手术室场景2）
  */
 const loadScene = async () => {
   if (!customSceneConfig) return;
@@ -310,13 +313,13 @@ const loadScene = async () => {
     dracoLoader.setDecoderPath('/draco/');
     loader.setDRACOLoader(dracoLoader);
     
-    // 加载包含woman的手术室模型
+    // 加载手术室场景2模型
     const gltf = await loader.loadAsync(sceneModelConfig.url);
     sceneObj = gltf.scene;
     
-    sceneObj.name = 'operating_room_with_woman';
+    sceneObj.name = 'operating_room_2';
     
-    // 应用位置配置
+    // 应用位置和旋转配置（注意：配置文件中的旋转值已经是弧度）
     sceneObj.position.set(
       sceneModelConfig.position.x,
       sceneModelConfig.position.y,
@@ -324,7 +327,7 @@ const loadScene = async () => {
     );
     sceneObj.rotation.set(
       sceneModelConfig.rotation.x,
-      THREE.MathUtils.degToRad(sceneModelConfig.rotation.y),
+      sceneModelConfig.rotation.y,
       sceneModelConfig.rotation.z
     );
     sceneObj.scale.set(
@@ -343,24 +346,16 @@ const loadScene = async () => {
     
     scene.add(sceneObj);
     
-    // 初始化场景动画系统（用于woman的sleep_idle动画）
+    // 初始化场景动画系统（如果有动画的话）
     if (gltf.animations && gltf.animations.length > 0) {
       mixerScene = new THREE.AnimationMixer(sceneObj);
       
-      // 查找sleep_idle动画并播放
-      const sleepIdleClip = THREE.AnimationClip.findByName(gltf.animations, 'sleep_idle');
-      if (sleepIdleClip) {
-        const sleepIdleAction = mixerScene.clipAction(sleepIdleClip);
-        sleepIdleAction.setLoop(THREE.LoopRepeat);
-        sleepIdleAction.play();
-        console.log('开始播放woman的sleep_idle动画');
-      } else {
-        console.warn('未找到sleep_idle动画，尝试播放第一个动画');
-        if (gltf.animations[0]) {
-          const action = mixerScene.clipAction(gltf.animations[0]);
-          action.setLoop(THREE.LoopRepeat);
-          action.play();
-        }
+      // 查找并播放场景中的动画
+      if (gltf.animations[0]) {
+        const action = mixerScene.clipAction(gltf.animations[0]);
+        action.setLoop(THREE.LoopRepeat);
+        action.play();
+        console.log('开始播放场景动画');
       }
     }
     
@@ -388,7 +383,7 @@ const loadCharacter = async () => {
     const gltf = await loader.loadAsync(characterModelConfig.url);
     doctorCharacter = gltf.scene;
     
-    // 应用位置配置
+    // 应用位置和旋转配置（注意：配置文件中的旋转值已经是弧度）
     doctorCharacter.position.set(
       characterModelConfig.position.x,
       characterModelConfig.position.y,
@@ -396,7 +391,7 @@ const loadCharacter = async () => {
     );
     doctorCharacter.rotation.set(
       characterModelConfig.rotation.x,
-      THREE.MathUtils.degToRad(characterModelConfig.rotation.y),
+      characterModelConfig.rotation.y,
       characterModelConfig.rotation.z
     );
     doctorCharacter.scale.set(
