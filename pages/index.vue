@@ -13,15 +13,18 @@
         >
           {{ isDeleteMode ? '完成' : '刪除場景' }}
         </button>
+        <!-- 
         <button 
           @click="showDebug = !showDebug" 
           class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm"
         >
           {{ showDebug ? '關閉調試' : '開啟調試' }}
         </button>
+        -->
       </div>
       
-      <!-- 自定义场景卡片 -->
+      <!-- 自定义场景卡片 - 已隐藏 -->
+      <!-- 
       <div class="mb-8">
         <div 
           class="bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-transform hover:scale-105 border-2 border-dashed border-blue-400"
@@ -36,6 +39,7 @@
           </div>
         </div>
       </div>
+      -->
       
       <!-- 场景卡片网格 -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -85,12 +89,14 @@
                 檢視角色
               </button>
             </div>
-            <!-- 调试信息 -->
+            <!-- 调试信息 - 已隐藏 -->
+            <!-- 
             <div v-if="showDebug" class="mt-2 text-xs text-gray-500">
               <div>角色: <span class="font-mono">{{ scene.trainee_character || '未定義' }}</span></div>
               <div>角色描述: <span class="font-mono">{{ scene.scene_description_charactor ? '有' : '無' }}</span></div>
               <div>颜色: <span class="font-mono">{{ scene.type_color || '未设置' }}</span></div>
             </div>
+            -->
           </div>
           
           <!-- 角色描述悬浮提示 -->
@@ -123,7 +129,8 @@
       </div>
     </div>
     
-    <!-- 自定义场景模态框 -->
+    <!-- 自定义场景模态框 - 已隐藏 -->
+    <!-- 
     <div v-if="showCustomSceneModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
         <div class="p-6">
@@ -137,7 +144,6 @@
           </div>
           
           <form @submit.prevent="generateCustomScene">
-            <!-- 场景类型选择 -->
             <div class="mb-4">
               <label class="block text-gray-700 text-sm font-bold mb-2">場景類型</label>
               <div class="flex flex-wrap gap-2">
@@ -157,7 +163,6 @@
               </div>
             </div>
             
-            <!-- 角色选择 -->
             <div class="mb-4">
               <label class="block text-gray-700 text-sm font-bold mb-2">角色類型</label>
               <div class="flex flex-wrap gap-2">
@@ -177,7 +182,6 @@
               </div>
             </div>
             
-            <!-- 症状选择 -->
             <div class="mb-4" v-if="customScene.type">
               <label class="block text-gray-700 text-sm font-bold mb-2">
                 {{ customScene.type === 'assistant_doctor' ? '情境' : '患者症状' }}
@@ -199,7 +203,6 @@
               </div>
             </div>
             
-            <!-- 病情程度 -->
             <div class="mb-4" v-if="customScene.type">
               <label class="block text-gray-700 text-sm font-bold mb-2">
                 {{ customScene.type === 'assistant_doctor' ? '紧急程度' : '症状严重程度' }}
@@ -221,7 +224,6 @@
               </div>
             </div>
             
-            <!-- 患者情绪 -->
             <div class="mb-4" v-if="customScene.type">
               <label class="block text-gray-700 text-sm font-bold mb-2">
                 {{ customScene.type === 'assistant_doctor' ? '医生态度' : '患者情绪' }}
@@ -243,7 +245,6 @@
               </div>
             </div>
             
-            <!-- 自定义备注 -->
             <div class="mb-6">
               <label class="block text-gray-700 text-sm font-bold mb-2">其他備註 (可選)</label>
               <textarea 
@@ -267,6 +268,7 @@
         </div>
       </div>
     </div>
+    -->
     
     <!-- 角色详情弹窗 -->
     <div v-if="showRoleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -350,16 +352,17 @@ import axios from 'axios';
 
 const router = useRouter();
 const scenes = ref([]);
-const showCustomSceneModal = ref(false);
-const isGenerating = ref(false);
+// const showCustomSceneModal = ref(false);  // 已隐藏自定义场景功能
+// const isGenerating = ref(false);          // 已隐藏自定义场景功能
 const hoveredScene = ref(null);
 const showRoleModal = ref(false);
 const selectedScene = ref(null);
-const showDebug = ref(false);
+// const showDebug = ref(false);             // 已隐藏调试功能
 const showDeleteModal = ref(false);
 const sceneToDelete = ref(null);
 const isDeleteMode = ref(false);
 
+/* 已隐藏自定义场景功能
 // 自定义场景选项
 const customSceneOptions = {
   types: [
@@ -432,7 +435,9 @@ const customScene = ref({
   emotion: '',
   notes: '',
 });
+*/
 
+/* 已隐藏自定义场景功能
 // 添加/移除症状
 const toggleSymptom = (symptom) => {
   if (customScene.value.symptoms.includes(symptom)) {
@@ -508,6 +513,7 @@ const getLabelByValue = (options, value) => {
   const option = options.find(opt => opt.value === value);
   return option ? option.label : value;
 };
+*/
 
 // 根据场景类型获取标签背景颜色
 const getTypeTagColor = (sceneType) => {
@@ -570,7 +576,7 @@ const selectScene = async (sceneId) => {
         if (sceneId === 'brain_surgery_002') {
           // 跳转到自定义手术场景页面
           router.push(`/custom-scene-operation?scene_id=${sceneId}`);
-        } else if (sceneId === 'brain_surgery_003') {
+        } else if (sceneId === 'patient_handover_001') {
           // 跳转到自定义电话场景页面
           router.push(`/custom-scene-phone?scene_id=${sceneId}`);
         } else {

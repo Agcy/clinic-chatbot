@@ -76,7 +76,7 @@ const route = useRoute();
 // 响应式数据
 const isLoading = ref(true);
 const currentScene = ref(null);
-const sceneId = ref('brain_surgery_003'); // 默认场景ID
+const sceneId = ref('patient_handover_001'); // 默认场景ID
 
 // 评估卡片相关数据
 const showEvaluationCard = ref(false);
@@ -116,7 +116,7 @@ const initializeScene = () => {
   if (!currentScene.value) {
     console.log('⚠️ 未找到场景数据，使用默认配置');
     currentScene.value = {
-      scene_id: 'brain_surgery_003',
+      scene_id: 'patient_handover_001',
       scene_title: '脑外科电话咨询',
       trainee_character: '脑外科医生',
       scene_description_charactor: '您是一名经验丰富的脑外科医生，正在接听患者或同事的电话咨询。请根据对方的问题给出专业的医疗建议。',
