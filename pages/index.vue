@@ -65,7 +65,6 @@
               :alt="scene.scene_title"
               class="w-full h-full object-cover"
               @error="handleImageError"
-              onerror="this.onerror=null; this.src='/default-scene.jpg';"
             >
           </div>
           
@@ -569,8 +568,10 @@ const selectScene = async (sceneId) => {
       
       // 检查是否为自定义场景
       if (scene.config_id === 'custom') {
-        // 将场景信息存储到localStorage，包含scene_id
-        localStorage.setItem('currentScene', JSON.stringify(scene));
+        // 将场景信息存储到localStorage，包含scene_id（仅在客户端）
+        if (process.client) {
+          localStorage.setItem('currentScene', JSON.stringify(scene));
+        }
         
         // 根据scene_id跳转到不同的自定义场景
         if (sceneId === 'brain_surgery_002') {
@@ -584,8 +585,10 @@ const selectScene = async (sceneId) => {
           router.push(`/custom-scene-operation?scene_id=${sceneId}`);
         }
       } else {
-        // 将场景信息存储到localStorage
-        localStorage.setItem('currentScene', JSON.stringify(scene));
+        // 将场景信息存储到localStorage（仅在客户端）
+        if (process.client) {
+          localStorage.setItem('currentScene', JSON.stringify(scene));
+        }
         // 跳转到训练页面
         router.push('/training');
       }
@@ -600,7 +603,7 @@ const selectScene = async (sceneId) => {
 // 处理图片加载错误
 const handleImageError = (event) => {
   console.log('图片加载失败，使用默认图片');
-  event.target.src = '/default-scene.jpg';
+  event.target.src = '/custom-scene.jpg';
 };
 
 // 查看角色详情

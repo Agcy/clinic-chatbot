@@ -1,56 +1,67 @@
 <!-- 自定义手术场景页面 -->
 <template>
   <div class="chat-container">
-    <!-- 3D场景背景 -->
-    <div class="scene-background">
-      <CustomSceneLoader
-        v-if="sceneId"
-        :scene-id="sceneId"
-      />
-      <div v-else class="loading-scene">
-        <div class="loading-spinner"></div>
-        <p>正在加载自定义场景...</p>
+    <ClientOnly>
+      <!-- 3D场景背景 -->
+      <div class="scene-background">
+        <CustomSceneLoader
+          v-if="sceneId"
+          :scene-id="sceneId"
+        />
+        <div v-else class="loading-scene">
+          <div class="loading-spinner"></div>
+          <p>正在加载自定义场景...</p>
+        </div>
       </div>
-    </div>
-    
-    <!-- 左侧卡片区域 -->
-    <div class="left-cards-container">
-      <!-- 角色提示卡片 -->
-      <RolePromptCard
-        :role-character="currentScene?.trainee_character || '醫生'"
-        :role-description="currentScene?.scene_description_charactor || '加載中...'"
-        :initial-collapsed="false"
+      
+      <!-- 左侧卡片区域 -->
+      <div class="left-cards-container">
+        <!-- 角色提示卡片 -->
+        <RolePromptCard
+          :role-character="currentScene?.trainee_character || '醫生'"
+          :role-description="currentScene?.scene_description_charactor || '加載中...'"
+          :initial-collapsed="false"
+        />
+        
+        <!-- 病人体征监测卡片 -->
+        <PatientVitalsCard
+          :vitals-data="currentScene?.patient_vitals || []"
+          :initial-collapsed="false"
+        />
+      </div>
+      
+      <ChatBoxComponent 
+        :show-evaluation-summary="showEvaluationSummary"
+        :evaluation-summary-data="evaluationSummaryData"
+        @evaluation-complete="handleEvaluationComplete"
+        @show-evaluation-card="handleShowEvaluationCard"
+        @retry-training="handleRetryTraining"
+        @go-home="handleGoHome"
       />
       
-      <!-- 病人体征监测卡片 -->
-      <PatientVitalsCard
-        :vitals-data="currentScene?.patient_vitals || []"
-        :initial-collapsed="false"
+      <!-- 评估卡片组件 -->
+      <EvaluationCard
+        :is-visible="showEvaluationCard"
+        :evaluation-data="evaluationData"
+        :conversation-data="conversationData"
+        @close="handleCloseEvaluationCard"
+        @retry-training="handleRetryTraining"
+        @generate-pdf="handleGeneratePDF"
+        @go-home="handleGoHome"
       />
-    </div>
-    
-    <ChatBoxComponent 
-      :show-evaluation-summary="showEvaluationSummary"
-      :evaluation-summary-data="evaluationSummaryData"
-      @evaluation-complete="handleEvaluationComplete"
-      @show-evaluation-card="handleShowEvaluationCard"
-      @retry-training="handleRetryTraining"
-      @go-home="handleGoHome"
-    />
-    
-    <!-- 评估卡片组件 -->
-    <EvaluationCard
-      :is-visible="showEvaluationCard"
-      :evaluation-data="evaluationData"
-      :conversation-data="conversationData"
-      @close="handleCloseEvaluationCard"
-      @retry-training="handleRetryTraining"
-      @generate-pdf="handleGeneratePDF"
-      @go-home="handleGoHome"
-    />
-    
-    <!-- 返回主页按钮 -->
-    <ReturnHomeButton />
+      
+      <!-- 返回主页按钮 -->
+      <ReturnHomeButton />
+      
+      <template #fallback>
+        <div class="h-screen flex items-center justify-center">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-lg text-gray-600">正在加载自定义手术场景...</p>
+          </div>
+        </div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
@@ -127,8 +138,10 @@ const handleRetryTraining = () => {
   showEvaluationCard.value = false;
   showEvaluationSummary.value = false;
   evaluationSummaryData.value = null;
-  // 重新加载页面或重置状态
-  window.location.reload();
+  // 重新加载页面或重置状态（仅在客户端）
+  if (process.client) {
+    window.location.reload();
+  }
 };
 
 /**
@@ -152,21 +165,24 @@ onMounted(() => {
   // 从URL参数获取scene_id
   sceneId.value = route.query.scene_id;
   
-  // 从localStorage获取当前场景信息
-  const sceneData = localStorage.getItem('currentScene');
-  if (!sceneData) {
-    // 如果没有场景信息，返回场景选择页面
-    router.push('/');
-    return;
-  }
+  // 仅在客户端运行localStorage相关代码
+  if (process.client) {
+    // 从localStorage获取当前场景信息
+    const sceneData = localStorage.getItem('currentScene');
+    if (!sceneData) {
+      // 如果没有场景信息，返回场景选择页面
+      router.push('/');
+      return;
+    }
 
-  try {
-    currentScene.value = JSON.parse(sceneData);
-    console.log('当前自定义手术场景:', currentScene.value);
-    console.log('场景ID:', sceneId.value);
-  } catch (error) {
-    console.error('解析场景数据失败:', error);
-    router.push('/');
+    try {
+      currentScene.value = JSON.parse(sceneData);
+      console.log('当前自定义手术场景:', currentScene.value);
+      console.log('场景ID:', sceneId.value);
+    } catch (error) {
+      console.error('解析场景数据失败:', error);
+      router.push('/');
+    }
   }
 });
 </script>

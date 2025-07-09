@@ -1,65 +1,76 @@
 <!-- 训练页面 -->
 <template>
   <div class="chat-container">
-    <!-- 3D场景背景 -->
-    <div class="scene-background">
-      <ThreeDSceneLoaderWithConfig
-        v-if="sceneConfigId"
-        :config-id="sceneConfigId"
-        :enable-controls="false"
-      />
-      <div v-else class="loading-scene">
-        <div class="loading-spinner"></div>
-        <p>正在加载场景配置...</p>
+    <ClientOnly>
+      <!-- 3D场景背景 -->
+      <div class="scene-background">
+        <ThreeDSceneLoaderWithConfig
+          v-if="sceneConfigId"
+          :config-id="sceneConfigId"
+          :enable-controls="false"
+        />
+        <div v-else class="loading-scene">
+          <div class="loading-spinner"></div>
+          <p>正在加载场景配置...</p>
+        </div>
       </div>
-    </div>
-    
-    <!-- 左侧卡片区域 -->
-    <div class="left-cards-container">
-      <!-- 角色提示卡片 -->
-      <RolePromptCard
-        :role-character="currentScene?.trainee_character || '醫生'"
-        :role-description="currentScene?.scene_description_charactor || '加載中...'"
-        :initial-collapsed="false"
+      
+      <!-- 左侧卡片区域 -->
+      <div class="left-cards-container">
+        <!-- 角色提示卡片 -->
+        <RolePromptCard
+          :role-character="currentScene?.trainee_character || '醫生'"
+          :role-description="currentScene?.scene_description_charactor || '加載中...'"
+          :initial-collapsed="false"
+        />
+        
+        <!-- 病人体征监测卡片 -->
+        <PatientVitalsCard
+          :vitals-data="currentScene?.patient_vitals || []"
+          :initial-collapsed="false"
+        />
+      </div>
+      
+      <ChatBoxComponent 
+        v-if="currentScene"
+        :scene="currentScene"
+        :show-evaluation-summary="showEvaluationSummary"
+        :evaluation-summary-data="evaluationSummaryData"
+        @evaluation-complete="handleEvaluationComplete"
+        @show-evaluation-card="handleShowEvaluationCard"
+        @retry-training="handleRetryTraining"
+        @go-home="handleGoHome"
       />
       
-      <!-- 病人体征监测卡片 -->
-      <PatientVitalsCard
-        :vitals-data="currentScene?.patient_vitals || []"
-        :initial-collapsed="false"
+      <!-- 加载状态 -->
+      <div v-else class="loading-chat-box">
+        <div class="loading-spinner"></div>
+        <p>正在加载聊天组件...</p>
+      </div>
+      
+      <!-- 评估卡片组件 -->
+      <EvaluationCard
+        :is-visible="showEvaluationCard"
+        :evaluation-data="evaluationData"
+        :conversation-data="conversationData"
+        @close="handleCloseEvaluationCard"
+        @retry-training="handleRetryTraining"
+        @generate-pdf="handleGeneratePDF"
+        @go-home="handleGoHome"
       />
-    </div>
-    
-    <ChatBoxComponent 
-      v-if="currentScene"
-      :scene="currentScene"
-      :show-evaluation-summary="showEvaluationSummary"
-      :evaluation-summary-data="evaluationSummaryData"
-      @evaluation-complete="handleEvaluationComplete"
-      @show-evaluation-card="handleShowEvaluationCard"
-      @retry-training="handleRetryTraining"
-      @go-home="handleGoHome"
-    />
-    
-    <!-- 加载状态 -->
-    <div v-else class="loading-chat-box">
-      <div class="loading-spinner"></div>
-      <p>正在加载聊天组件...</p>
-    </div>
-    
-    <!-- 评估卡片组件 -->
-    <EvaluationCard
-      :is-visible="showEvaluationCard"
-      :evaluation-data="evaluationData"
-      :conversation-data="conversationData"
-      @close="handleCloseEvaluationCard"
-      @retry-training="handleRetryTraining"
-      @generate-pdf="handleGeneratePDF"
-      @go-home="handleGoHome"
-    />
-    
-    <!-- 返回主页按钮 -->
-    <ReturnHomeButton />
+      
+      <!-- 返回主页按钮 -->
+      <ReturnHomeButton />
+      
+      <template #fallback>
+        <div class="h-screen flex items-center justify-center">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-lg text-gray-600">正在加载训练环境...</p>
+          </div>
+        </div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
@@ -153,8 +164,10 @@ const handleRetryTraining = () => {
   showEvaluationCard.value = false;
   showEvaluationSummary.value = false;
   evaluationSummaryData.value = null;
-  // 重新加载页面或重置状态
-  window.location.reload();
+  // 重新加载页面或重置状态（仅在客户端）
+  if (process.client) {
+    window.location.reload();
+  }
 };
 
 /**
@@ -175,20 +188,23 @@ const handleGoHome = () => {
 };
 
 onMounted(() => {
-  // 从localStorage获取当前场景信息
-  const sceneData = localStorage.getItem('currentScene');
-  if (!sceneData) {
-    // 如果没有场景信息，返回场景选择页面
-    router.push('/');
-    return;
-  }
+  // 仅在客户端运行localStorage相关代码
+  if (process.client) {
+    // 从localStorage获取当前场景信息
+    const sceneData = localStorage.getItem('currentScene');
+    if (!sceneData) {
+      // 如果没有场景信息，返回场景选择页面
+      router.push('/');
+      return;
+    }
 
-  try {
-    currentScene.value = JSON.parse(sceneData);
-    console.log('当前场景:', currentScene.value);
-  } catch (error) {
-    console.error('解析场景数据失败:', error);
-    router.push('/');
+    try {
+      currentScene.value = JSON.parse(sceneData);
+      console.log('当前场景:', currentScene.value);
+    } catch (error) {
+      console.error('解析场景数据失败:', error);
+      router.push('/');
+    }
   }
 });
 </script>

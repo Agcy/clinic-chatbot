@@ -9,7 +9,7 @@ import { setConversationId, getConversationId, clearConversationId } from '../ut
 
 // 扣子API配置
 const COZE_API_URL = 'https://api.coze.cn/v1/workflows/chat';
-const COZE_API_TOKEN = process.env.COZE_API_TOKEN;
+const COZE_API_TOKEN_NEW = process.env.COZE_API_TOKEN_NEW;
 const WORKFLOW_ID = process.env.COZE_WORKFLOW_CONVERSATION_ID;
 
 // conversation_id管理已移至 conversation-manager.js
@@ -201,7 +201,7 @@ export default defineEventHandler(async (event) => {
         const response = await fetch(COZE_API_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${COZE_API_TOKEN}`,
+                'Authorization': `Bearer ${COZE_API_TOKEN_NEW}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(cozeRequestBody)

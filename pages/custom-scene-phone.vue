@@ -1,62 +1,73 @@
 <!-- 自定义电话场景页面 -->
 <template>
   <div class="chat-container">
-    <!-- 3D场景背景 -->
-    <div class="scene-background">
-      <CustomScenePhoneLoader :scene-id="sceneId" />
-    </div>
-    
-    <!-- 加载状态 -->
-    <div v-if="isLoading" class="loading-scene">
-      <div class="loading-spinner"></div>
-      <p>正在加载电话场景...</p>
-    </div>
-    
-    <!-- 左侧卡片区域 -->
-    <div class="left-cards-container">
-      <!-- 角色提示卡片 -->
-      <RolePromptCard
-        :role-character="currentScene?.trainee_character || '医生'"
-        :role-description="currentScene?.scene_description_charactor || '在这个电话场景中，您需要与患者或同事进行电话沟通。请根据情况做出适当的回应。'"
-        :initial-collapsed="false"
-      />
+    <ClientOnly>
+      <!-- 3D场景背景 -->
+      <div class="scene-background">
+        <CustomScenePhoneLoader :scene-id="sceneId" />
+      </div>
       
-      <!-- 病人体征监测卡片 -->
-      <PatientVitalsCard
-        :vitals-data="currentScene?.patient_vitals || []"
-        :initial-collapsed="false"
-      />
-    </div>
-    
-    <!-- 右下角聊天框 -->
-    <div class="chat-box-container">
-      <ChatBoxComponent 
-        v-if="currentScene"
-        :scene="currentScene"
-        :is-training="true"
-        :show-evaluation-summary="showEvaluationSummary"
-        :evaluation-summary-data="evaluationSummaryData"
-        @training-complete="handleTrainingComplete"
-        @evaluation-complete="handleEvaluationComplete"
-        @show-evaluation-card="handleShowEvaluationCard"
+      <!-- 加载状态 -->
+      <div v-if="isLoading" class="loading-scene">
+        <div class="loading-spinner"></div>
+        <p>正在加载电话场景...</p>
+      </div>
+      
+      <!-- 左侧卡片区域 -->
+      <div class="left-cards-container">
+        <!-- 角色提示卡片 -->
+        <RolePromptCard
+          :role-character="currentScene?.trainee_character || '医生'"
+          :role-description="currentScene?.scene_description_charactor || '在这个电话场景中，您需要与患者或同事进行电话沟通。请根据情况做出适当的回应。'"
+          :initial-collapsed="false"
+        />
+        
+        <!-- 病人体征监测卡片 -->
+        <PatientVitalsCard
+          :vitals-data="currentScene?.patient_vitals || []"
+          :initial-collapsed="false"
+        />
+      </div>
+      
+      <!-- 右下角聊天框 -->
+      <div class="chat-box-container">
+        <ChatBoxComponent 
+          v-if="currentScene"
+          :scene="currentScene"
+          :is-training="true"
+          :show-evaluation-summary="showEvaluationSummary"
+          :evaluation-summary-data="evaluationSummaryData"
+          @training-complete="handleTrainingComplete"
+          @evaluation-complete="handleEvaluationComplete"
+          @show-evaluation-card="handleShowEvaluationCard"
+          @retry-training="handleRetryTraining"
+          @go-home="handleGoHome"
+        />
+      </div>
+      
+      <!-- 评估卡片组件 -->
+      <EvaluationCard
+        :is-visible="showEvaluationCard"
+        :evaluation-data="evaluationData"
+        :conversation-data="conversationData"
+        @close="handleCloseEvaluationCard"
         @retry-training="handleRetryTraining"
+        @generate-pdf="handleGeneratePDF"
         @go-home="handleGoHome"
       />
-    </div>
-    
-    <!-- 评估卡片组件 -->
-    <EvaluationCard
-      :is-visible="showEvaluationCard"
-      :evaluation-data="evaluationData"
-      :conversation-data="conversationData"
-      @close="handleCloseEvaluationCard"
-      @retry-training="handleRetryTraining"
-      @generate-pdf="handleGeneratePDF"
-      @go-home="handleGoHome"
-    />
-    
-    <!-- 右上角返回按钮 -->
-    <ReturnHomeButton />
+      
+      <!-- 右上角返回按钮 -->
+      <ReturnHomeButton />
+      
+      <template #fallback>
+        <div class="h-screen flex items-center justify-center">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-lg text-gray-600">正在加载电话场景...</p>
+          </div>
+        </div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
@@ -93,14 +104,17 @@ const evaluationSummaryData = ref(null);
 const initializeScene = () => {
   console.log('🎬 初始化电话场景...');
   
-  // 从localStorage获取场景数据
-  const sceneData = localStorage.getItem('currentScene');
-  if (sceneData) {
-    try {
-      currentScene.value = JSON.parse(sceneData);
-      console.log('✅ 场景数据加载成功:', currentScene.value);
-    } catch (error) {
-      console.error('❌ 解析场景数据失败:', error);
+  // 仅在客户端运行localStorage相关代码
+  if (process.client) {
+    // 从localStorage获取场景数据
+    const sceneData = localStorage.getItem('currentScene');
+    if (sceneData) {
+      try {
+        currentScene.value = JSON.parse(sceneData);
+        console.log('✅ 场景数据加载成功:', currentScene.value);
+      } catch (error) {
+        console.error('❌ 解析场景数据失败:', error);
+      }
     }
   }
   
@@ -136,26 +150,30 @@ const initializeScene = () => {
  */
 const handleTrainingComplete = () => {
   console.log('🎉 电话场景训练完成！');
-  console.log('🔍 检查window.finishTraining是否存在:', typeof window.finishTraining);
   
-  // 调用全局的训练结束函数（触发phone_dropout动画）
-  if (window.finishTraining) {
-    console.log('✅ 调用window.finishTraining()');
-    window.finishTraining();
+  // 仅在客户端运行window相关代码
+  if (process.client) {
+    console.log('🔍 检查window.finishTraining是否存在:', typeof window.finishTraining);
     
-    // 设置idle动画开始的回调 - 只是记录，不跳转
-    window.onPhoneIdleStarted = () => {
-      console.log('🎭 idle动画已开始，将持续循环播放...');
-      console.log('🏠 训练已完成，idle动画将持续播放，用户可手动返回主页');
-    };
-    
-  } else {
-    console.error('❌ window.finishTraining函数不存在！');
-    console.log('🔍 当前window对象上的相关函数:', {
-      finishTraining: window.finishTraining,
-      playTalkAnimation: window.playTalkAnimation,
-      currentSceneCharacter: window.currentSceneCharacter
-    });
+    // 调用全局的训练结束函数（触发phone_dropout动画）
+    if (window.finishTraining) {
+      console.log('✅ 调用window.finishTraining()');
+      window.finishTraining();
+      
+      // 设置idle动画开始的回调 - 只是记录，不跳转
+      window.onPhoneIdleStarted = () => {
+        console.log('🎭 idle动画已开始，将持续循环播放...');
+        console.log('🏠 训练已完成，idle动画将持续播放，用户可手动返回主页');
+      };
+      
+    } else {
+      console.error('❌ window.finishTraining函数不存在！');
+      console.log('🔍 当前window对象上的相关函数:', {
+        finishTraining: window.finishTraining,
+        playTalkAnimation: window.playTalkAnimation,
+        currentSceneCharacter: window.currentSceneCharacter
+      });
+    }
   }
 };
 
@@ -208,8 +226,10 @@ const handleRetryTraining = () => {
   showEvaluationCard.value = false;
   showEvaluationSummary.value = false;
   evaluationSummaryData.value = null;
-  // 重新加载页面或重置状态
-  window.location.reload();
+  // 重新加载页面或重置状态（仅在客户端）
+  if (process.client) {
+    window.location.reload();
+  }
 };
 
 /**
@@ -243,18 +263,21 @@ onMounted(() => {
 onUnmounted(() => {
   console.log('📱 电话场景页面卸载，清理全局状态');
   
-  // 清理全局函数和状态
-  if (window.finishTraining) {
-    delete window.finishTraining;
-  }
-  if (window.playTalkAnimation) {
-    delete window.playTalkAnimation;
-  }
-  if (window.onPhoneIdleStarted) {
-    delete window.onPhoneIdleStarted;
-  }
-  if (window.currentSceneCharacter) {
-    delete window.currentSceneCharacter;
+  // 仅在客户端清理全局函数和状态
+  if (process.client) {
+    // 清理全局函数和状态
+    if (window.finishTraining) {
+      delete window.finishTraining;
+    }
+    if (window.playTalkAnimation) {
+      delete window.playTalkAnimation;
+    }
+    if (window.onPhoneIdleStarted) {
+      delete window.onPhoneIdleStarted;
+    }
+    if (window.currentSceneCharacter) {
+      delete window.currentSceneCharacter;
+    }
   }
 });
 

@@ -129,7 +129,7 @@ POST /api/coze-conversation
 
 ### 配置环境变量
 ```bash
-COZE_API_TOKEN=你的扣子API令牌
+COZE_API_TOKEN_NEW=你的扣子API令牌
 COZE_WORKFLOW_CONVERSATION_ID=工作流ID
 ```
 

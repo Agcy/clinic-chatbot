@@ -9,7 +9,7 @@ import { getConversationId } from '../utils/conversation-manager';
 
 // 扣子API配置
 const COZE_API_URL = 'https://api.coze.cn/v1/workflow/run';
-const COZE_API_TOKEN = process.env.COZE_API_TOKEN || 'pat_088HrAHRNL6GWNyG4e0O4K17lDYI2K1D13x1GKolnAANEZDKMlbMm7NV7CLHNyR7';
+const COZE_API_TOKEN_NEW = process.env.COZE_API_TOKEN_NEW;
 const EVALUATION_WORKFLOW_ID = process.env.COZE_WORKFLOW_EVALUATION_ID || '7513826885483282472';
 
 
@@ -320,7 +320,7 @@ export default defineEventHandler(async (event) => {
     const response = await fetch(COZE_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${COZE_API_TOKEN}`,
+        'Authorization': `Bearer ${COZE_API_TOKEN_NEW}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(cozeRequestBody)

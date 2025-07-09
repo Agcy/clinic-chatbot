@@ -163,35 +163,43 @@ const updateUrlParams = () => {
  * 生成分享链接
  */
 const generateShareLink = () => {
-  const baseUrl = window.location.origin + window.location.pathname;
-  const queryParams = new URLSearchParams();
-  queryParams.set('configId', encodeURIComponent(selectedConfigId.value));
-  queryParams.set('controls', enableControls.value.toString());
-  
-  shareLink.value = `${baseUrl}?${queryParams.toString()}`;
-  updateUrlParams();
+  if (process.client) {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const queryParams = new URLSearchParams();
+    queryParams.set('configId', encodeURIComponent(selectedConfigId.value));
+    queryParams.set('controls', enableControls.value.toString());
+    
+    shareLink.value = `${baseUrl}?${queryParams.toString()}`;
+    updateUrlParams();
+  }
 };
 
 /**
  * 复制链接到剪贴板
  */
 const copyToClipboard = () => {
-  navigator.clipboard.writeText(shareLink.value).then(() => {
-    copied.value = true;
-    setTimeout(() => {
-      copied.value = false;
-    }, 2000);
-  });
+  if (process.client && navigator.clipboard) {
+    navigator.clipboard.writeText(shareLink.value).then(() => {
+      copied.value = true;
+      setTimeout(() => {
+        copied.value = false;
+      }, 2000);
+    }).catch(err => {
+      console.error('复制失败:', err);
+    });
+  }
 };
 
 /**
  * 测试说话动画
  */
 const testTalkAnimation = (play) => {
-  if (window.playTalkAnimation) {
-    window.playTalkAnimation(play);
-  } else {
-    console.warn('动画控制函数未准备好');
+  if (process.client) {
+    if (window.playTalkAnimation) {
+      window.playTalkAnimation(play);
+    } else {
+      console.warn('动画控制函数未准备好');
+    }
   }
 };
 
