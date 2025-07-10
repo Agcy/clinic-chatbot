@@ -1556,17 +1556,19 @@ const goToHome = () => {
 
 // 组件销毁时清理
 onBeforeUnmount(async () => {
+  console.log('🧹 ChatBoxComponent开始清理...');
+
   // 停止录音
   if (isRecording.value) {
     await stopRecording();
   }
-  
+
   // 停止音频流
   if (window.currentAudioStream) {
     window.currentAudioStream.getTracks().forEach(track => track.stop());
     window.currentAudioStream = null;
   }
-  
+
   // 关闭STT会话
   if (sttSessionId) {
     try {
@@ -1578,12 +1580,41 @@ onBeforeUnmount(async () => {
       console.error('关闭STT会话失败:', error);
     }
   }
-  
+
+  // 清理服务器端conversation_id
+  try {
+    await axios.post("/api/coze-conversation", {
+      action: 'clearHistory',
+      userId: 'default_user'
+    });
+    console.log('✅ 服务器端conversation_id已清理');
+  } catch (error) {
+    console.error('❌ 清理服务器端conversation_id失败:', error);
+  }
+
   // 销毁雷达图
   if (radarChart) {
     radarChart.destroy();
     radarChart = null;
   }
+
+  // 清理所有响应式状态
+  messages.value = [];
+  userInput.value = "";
+  isRecording.value = false;
+  audioBlob.value = null;
+  trainingFinished.value = false;
+  isEvaluating.value = false;
+  showEvaluation.value = false;
+  evaluationRating.value = 0;
+  evaluationMsg.value = "";
+  evaluationReasoning.value = "";
+  sbarScores.value = null;
+  expandedSbarItems.value = [];
+  showReasoning.value = false;
+  audioChunks = [];
+
+  console.log('✅ ChatBoxComponent清理完成');
 });
 
 // 自动调整textarea高度

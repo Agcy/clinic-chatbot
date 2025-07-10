@@ -559,20 +559,77 @@ const fetchScenes = async () => {
   }
 };
 
+/**
+ * 清理之前的对话数据
+ */
+const clearPreviousConversationData = async () => {
+  console.log('🧹 主页: 清理之前的对话数据...');
+
+  try {
+    // 清理服务器端conversation_id
+    await axios.post("/api/coze-conversation", {
+      action: 'clearHistory',
+      userId: 'default_user'
+    });
+    console.log('✅ 主页: 服务器端conversation_id已清理');
+  } catch (error) {
+    console.error('❌ 主页: 清理服务器端conversation_id失败:', error);
+  }
+
+  // 仅在客户端清理
+  if (process.client) {
+    // 清理对话相关的localStorage数据（保留用户偏好）
+    const keysToRemove = [
+      'conversationHistory',
+      'trainingProgress',
+      'evaluationData'
+    ];
+
+    keysToRemove.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`✅ 主页: 已清理localStorage: ${key}`);
+      }
+    });
+
+    // 清理全局对话状态
+    const globalKeysToClean = [
+      'finishTraining',
+      'playTalkAnimation',
+      'onPhoneIdleStarted',
+      'conversationComplete'
+    ];
+
+    globalKeysToClean.forEach(key => {
+      if (window[key]) {
+        delete window[key];
+        console.log(`✅ 主页: 已清理全局变量: ${key}`);
+      }
+    });
+  }
+
+  console.log('✅ 主页: 对话数据清理完成');
+};
+
 // 选择场景
 const selectScene = async (sceneId) => {
+  console.log('选择场景:', sceneId);
+
+  // 先清理之前的对话数据
+  await clearPreviousConversationData();
+
   try {
     const response = await axios.post('/api/scenes', { scene_id: sceneId });
     if (response.data.success) {
       const scene = response.data.scene;
-      
+
       // 检查是否为自定义场景
       if (scene.config_id === 'custom') {
         // 将场景信息存储到localStorage，包含scene_id（仅在客户端）
         if (process.client) {
           localStorage.setItem('currentScene', JSON.stringify(scene));
         }
-        
+
         // 根据scene_id跳转到不同的自定义场景
         if (sceneId === 'brain_surgery_002') {
           // 跳转到自定义手术场景页面
@@ -643,6 +700,9 @@ const deleteScene = async () => {
 
 // 页面加载时初始化场景数据
 onMounted(async () => {
+  // 页面加载时清理之前的对话数据
+  await clearPreviousConversationData();
+
   // 初始化场景数据 - 不再需要调用 /api/init-scenes
   try {
     await fetchScenes(); // 保留 fetchScenes 以加载列表

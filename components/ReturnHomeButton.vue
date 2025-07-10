@@ -15,6 +15,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 const router = useRouter();
 
@@ -35,9 +36,86 @@ const props = defineProps({
   }
 });
 
+/**
+ * 全面清理对话相关的缓存和状态
+ */
+const clearAllConversationData = async () => {
+  console.log('🧹 开始全面清理对话缓存和状态...');
+
+  try {
+    // 1. 清理服务器端conversation_id
+    await axios.post("/api/coze-conversation", {
+      action: 'clearHistory',
+      userId: 'default_user'
+    });
+    console.log('✅ 服务器端conversation_id已清理');
+  } catch (error) {
+    console.error('❌ 清理服务器端conversation_id失败:', error);
+  }
+
+  // 仅在客户端执行清理操作
+  if (process.client) {
+    try {
+      // 2. 清理localStorage中的场景和对话相关数据
+      const keysToRemove = [
+        'currentScene',
+        'conversationHistory',
+        'trainingProgress',
+        'evaluationData',
+        'userPreferences'
+      ];
+
+      keysToRemove.forEach(key => {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+          console.log(`✅ 已清理localStorage: ${key}`);
+        }
+      });
+
+      // 3. 清理sessionStorage
+      sessionStorage.clear();
+      console.log('✅ sessionStorage已清理');
+
+      // 4. 清理全局状态和函数
+      const globalKeysToClean = [
+        'finishTraining',
+        'playTalkAnimation',
+        'onPhoneIdleStarted',
+        'currentSceneCharacter',
+        'currentAudioStream',
+        'conversationComplete'
+      ];
+
+      globalKeysToClean.forEach(key => {
+        if (window[key]) {
+          delete window[key];
+          console.log(`✅ 已清理全局变量: ${key}`);
+        }
+      });
+
+      // 5. 停止所有可能的音频流
+      if (window.currentAudioStream) {
+        window.currentAudioStream.getTracks().forEach(track => track.stop());
+        window.currentAudioStream = null;
+        console.log('✅ 音频流已停止');
+      }
+
+      console.log('🎉 对话缓存和状态清理完成');
+
+    } catch (error) {
+      console.error('❌ 清理客户端数据时出错:', error);
+    }
+  }
+};
+
 // 处理返回操作
-const handleReturn = () => {
+const handleReturn = async () => {
   console.log('🏠 用户点击返回主页按钮');
+
+  // 先清理所有对话相关数据
+  await clearAllConversationData();
+
+  // 然后跳转到主页
   router.push('/');
 };
 </script>
